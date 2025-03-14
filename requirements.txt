@@ -24,7 +24,6 @@ requests-toolbelt==1.0.0
 safetensors==0.5.3
 sentence-transformers==3.4.1
 sympy==1.13.1
-text-generation==0.7.0
 tokenizers==0.21.0
 torch==2.5.0
 torchaudio==2.5.0
