@@ -5,7 +5,8 @@
 RAG (Retrieval-Augmented Generation) is a technique that combines retrieval-based methods with generative models to produce more accurate and contextually relevant responses. It retrieves relevant documents from a large corpus and uses them to generate answers. In this example we used a basic RAG using LlamaIndex and Hugging Face models.
 
 
-## How to Run the Script
+## How to run the RAG
+
 1. Clone the repository:
     ```sh
     git clone https://github.com/giobbu/ready-to-rag.git
@@ -22,10 +23,34 @@ RAG (Retrieval-Augmented Generation) is a technique that combines retrieval-base
     python main.py --query "<query>"
     ```
 
-## Example
+## Baseline
 
+```sh
+nano config.py
+```
+
+In the`EmbeddingSettings` dataclass, if `finetuning` is set to `False`, the RAG will not fine-tune the embedding model.
+
+### Example 
 - Query:
-> What does it mean - Explainable Anomaly Detection - ?
+> What does it mean 'Explainable Anomaly Detection'?
 
 - Response:
-> Explainable Anomaly Detection (EAD) is a process of understanding and explaning anomalies in a machine learning model. EAD helps domain experts to understand and validate the decision-making process of the machine learning model by providing explanations that explain how the model makes predictions. Explaining anomalies is important in many real-world applications, such as in the autonomous car and medical domains, where the lack of understanding and validating the decision-making process of a machine learning system is a disadvantage. EAD can help bridge the gap between detecting outliers and identiﬁcating domain-specific anomalies.
+> Explainable Anomaly Detection (EAD) is a new approach to anomaly dete-
+ction that aims to provide an explanation of the anomaly to the domain experts by providing a visualization of the anomaly's cause. EAD is based on explanation algorithms that provide a detailed explanation of the reason for the anomaly, enabling domain experts to better understand the anomaly and make informed decisions. In this paper, we provide an overview of the current state of EAD and discuss the limitations and challenges of using explanation algorithms in EAD.
+
+## Embedding Finetuning
+
+If `finetuning` is set to `True`, the RAG  fine-tunes a linear adapter on top of the embedding model. 
+
+### Example
+- Query:
+> What does it mean 'Explainable Anomaly Detection'?
+
+- Response:
+> Explainable Anomaly Detection refers to the process of not only identifying anomalies in data but also providing clear and interpretable explanations for why those anomalies were detected. This approach aims to bridge the gap between detecting outliers and understanding domain-specific anomalies, making it easier for domain experts to trust and validate the anomaly detection system. By offering explanations for anomalies, experts can better comprehend why certain instances are flagged as anomalies, leading to increased trust in the detection system.
+
+## Evaluation (TODO)
+
+## Hyperparameters Evaluation (TODO)
+

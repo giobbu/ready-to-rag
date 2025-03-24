@@ -1,45 +1,53 @@
+from loguru import logger
 from llama_index.core import Settings
-from llama_index.llms.huggingface import HuggingFaceLLM
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
-# from llama_index.finetuning import SentenceTransformersFinetuneEngine
-from loguru import logger
+from llama_index.finetuning import generate_qa_embedding_pairs
+
+from llama_index.core.evaluation import EmbeddingQAFinetuneDataset
+from llama_index.finetuning import EmbeddingAdapterFinetuneEngine
+from llama_index.core.embeddings.utils import resolve_embed_model
+from llama_index.embeddings.adapter import AdapterEmbeddingModel
+
+from llama_index.llms.openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()
+import os
+os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 class RAGgish:
     " RAG model for question answering "
-    def __init__(self, embed_name, llm_name, context_window, max_new_tokens, generate_kwargs, chunk_size=1000):
-        self.context_window = context_window
-        self.max_new_tokens = max_new_tokens
-        self.generate_kwargs = generate_kwargs
-        self._set_embed_model(embed_name)
-        self._set_llm_model(llm_name)
+    def __init__(self, embed_name, llm_name, chunk_size=1000):
+        self.embed_name = embed_name
+        self.llm_name = llm_name
+        self._set_embed_model
+        self._set_llm_model
         self.chunk_size = chunk_size
 
-    def _set_embed_model(self, embed_name):
+    @property
+    def _set_embed_model(self):
         """ Set the embedding model """
-        self.embed_model = HuggingFaceEmbedding(model_name=embed_name)
-        logger.debug(f"Loaded embedding model: {embed_name}")
+        try:
+            self.embed_model = HuggingFaceEmbedding(model_name=self.embed_name)
+        except:
+            raise ValueError(f"Error loading embedding model: {self.embed_name}")
+        logger.debug(f"Loaded embedding model: {self.embed_name}")
 
-    def _set_llm_model(self, llm_name):
+    @property
+    def _set_llm_model(self):
         """ Set the LLM model """
-        if isinstance(llm_name, tuple):
-            llm_name = llm_name[0]
-            self.context_window = self.context_window[0]
-            self.max_new_tokens = self.max_new_tokens[0]
-        Settings.llm = HuggingFaceLLM(
-            model_name=llm_name,
-            tokenizer_name=llm_name,
-            context_window=self.context_window,
-            max_new_tokens=self.max_new_tokens,
-            generate_kwargs=self.generate_kwargs
-        )
-        logger.debug(f"Loaded LLM model: {Settings.llm.model_name}")
+        try: 
+            Settings.llm = OpenAI(temperature=0.0, model=self.llm_name)
+        except:
+            raise ValueError(f"Error loading LLM model: {self.llm_name}")
+        logger.debug(f"Loaded LLM model: {self.llm_name}")
 
     def load_data(self, input_dir, required_exts):
         " Load data from input_dir "
         logger.debug(f"Load from PATH: {input_dir}")
-        documents = SimpleDirectoryReader(input_dir=input_dir, required_exts=required_exts).load_data()
+        documents = SimpleDirectoryReader(input_dir=input_dir, 
+                                        required_exts=required_exts).load_data()
         logger.debug(f"Loaded {len(documents)} documents")
         return documents
     
@@ -49,16 +57,83 @@ class RAGgish:
         parser = SentenceSplitter(chunk_size=self.chunk_size)
         nodes = parser.get_nodes_from_documents(documents, show_progress=True)
         return nodes
+    
+    def parse_save_data_finetune(self, 
+                                input_dir_train, 
+                                input_dir_val, 
+                                required_exts, 
+                                prompt_tmpl,
+                                save_train_path, 
+                                save_val_path):
+        " Finetune the LLM model "        
+        logger.debug("Finetuning LLM model...")
+        logger.debug("- Load and parse data for training")
+        documents_train = self.load_data(input_dir_train, required_exts)
+        nodes_train = self.parse_documents(documents_train)
+        logger.debug("- Load and parse data for validation")
+        documents_val = self.load_data(input_dir_val, required_exts)
+        nodes_val = self.parse_documents(documents_val)
+        logger.debug("- Generate QA pairs - training")
+        prompts={}
+        prompts["EN"] = prompt_tmpl
+        train_dataset = generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
+                                                                model="gpt-3.5-turbo"),
+                                                                nodes=nodes_train,
+                                                                qa_generate_prompt_tmpl = prompts["EN"],
+                                                                num_questions_per_chunk=1,
+                                                                output_path=save_train_path
+                                                            )
+        logger.debug("- Generate QA pairs - validation")
+        val_dataset = generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
+                                                                model="gpt-3.5-turbo"),
+                                                                nodes=nodes_val,
+                                                                qa_generate_prompt_tmpl = prompts["EN"],
+                                                                num_questions_per_chunk=1,
+                                                                output_path=save_val_path
+                                                            )
+        return train_dataset, val_dataset
+    
+    def load_finetune_data(self, train_data_path, val_data_path):
+        " Load finetune data "
+        logger.debug("Loading finetune data...")
+        train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
+        val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
+        logger.debug("...Finetune data loaded")
+        return train_dataset, val_dataset
+        
+    def get_sentence_transformer_finetune(self, train_dataset, model_output_path):
+        " Finetune the LLM model "
+        logger.debug('...Loading base embedding model and setting up finetuning engine')
+        base_embed_model = resolve_embed_model(f"local:{self.embed_name}")
+        finetuned_engine = EmbeddingAdapterFinetuneEngine(
+            train_dataset,
+            base_embed_model,
+            model_output_path = model_output_path,
+            bias=True,
+            epochs=10,
+            verbose=True,
+        )
+        logger.debug('...Engine Fine-tuned')
+        return finetuned_engine
+    
+    def load_finetuned_model(self, embed_name: str, model_output_path: str):
+            """ Load the finetuned model """
+            base_embed_model = resolve_embed_model(f"local:{embed_name}")
+            embed_model_finetuned = AdapterEmbeddingModel(
+                                    base_embed_model,
+                                    adapter_path=model_output_path[0],
+                                )
+            return embed_model_finetuned
 
-    def create_index(self, nodes):
+    def create_index(self, nodes, embed_model):
         " Create a vector store index "
         logger.debug("Creating VectorStoreIndex...")
         index = VectorStoreIndex(
         nodes=nodes, 
-        embed_model=self.embed_model, 
+        embed_model=embed_model, 
         insert_batch_size=1000,
         show_progress=True
-    )
+        )
         logger.debug("...VectorStoreIndex created")
         return index
     
