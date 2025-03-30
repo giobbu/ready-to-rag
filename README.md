@@ -48,7 +48,7 @@ If `finetuning` is set to `True`, the RAG  fine-tunes a linear adapter on top of
 > What does it mean 'Explainable Anomaly Detection'?
 
 - Response:
-> Explainable Anomaly Detection refers to the process of not only identifying anomalies in data but also providing clear and interpretable explanations for why those anomalies were detected. This approach aims to bridge the gap between detecting outliers and understanding domain-specific anomalies, making it easier for domain experts to trust and validate the anomaly detection system. By offering explanations for anomalies, experts can better comprehend why certain instances are flagged as anomalies, leading to increased trust in the detection system.
+> Explainable Anomaly Detection refers to the process of not only identifying anomalies in a system or dataset but also providing clear and understandable explanations for why those anomalies were detected. This approach aims to bridge the gap between detecting outliers and understanding domain-specific anomalies by offering insights into the reasons behind the anomalies. By providing explanations for anomalies, domain experts can better comprehend the detected anomalies, leading to increased trust in the anomaly detection system and facilitating decision-making based on the identified anomalies.
 
 ## Evaluation (TODO)
 

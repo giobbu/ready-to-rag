@@ -65,8 +65,7 @@ class RAGgish:
                                 prompt_tmpl,
                                 save_train_path, 
                                 save_val_path):
-        " Finetune the LLM model "        
-        logger.debug("Finetuning LLM model...")
+        """ Parse and save data for finetuning """
         logger.debug("- Load and parse data for training")
         documents_train = self.load_data(input_dir_train, required_exts)
         nodes_train = self.parse_documents(documents_train)
@@ -76,7 +75,7 @@ class RAGgish:
         logger.debug("- Generate QA pairs - training")
         prompts={}
         prompts["EN"] = prompt_tmpl
-        train_dataset = generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
+        generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
                                                                 model="gpt-3.5-turbo"),
                                                                 nodes=nodes_train,
                                                                 qa_generate_prompt_tmpl = prompts["EN"],
@@ -84,25 +83,24 @@ class RAGgish:
                                                                 output_path=save_train_path
                                                             )
         logger.debug("- Generate QA pairs - validation")
-        val_dataset = generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
+        generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
                                                                 model="gpt-3.5-turbo"),
                                                                 nodes=nodes_val,
                                                                 qa_generate_prompt_tmpl = prompts["EN"],
                                                                 num_questions_per_chunk=1,
                                                                 output_path=save_val_path
                                                             )
-        return train_dataset, val_dataset
     
     def load_finetune_data(self, train_data_path, val_data_path):
         " Load finetune data "
-        logger.debug("Loading finetune data...")
+        logger.debug("Loading data for finetuning...")
         train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
         val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
-        logger.debug("...Finetune data loaded")
+        logger.debug("...data loaded")
         return train_dataset, val_dataset
         
     def get_sentence_transformer_finetune(self, train_dataset, model_output_path):
-        " Finetune the LLM model "
+        " Get the finetune engine "
         logger.debug('...Loading base embedding model and setting up finetuning engine')
         base_embed_model = resolve_embed_model(f"local:{self.embed_name}")
         finetuned_engine = EmbeddingAdapterFinetuneEngine(
@@ -115,6 +113,35 @@ class RAGgish:
         )
         logger.debug('...Engine Fine-tuned')
         return finetuned_engine
+    
+    def finetune_embeddings(self, 
+                            input_dir_train, 
+                            input_dir_val,
+                            prompt_tmpl,
+                            save_train_path, 
+                            save_val_path):
+        """ Finetune the embeddings """
+        logger.debug("Finetuning embeddings...")
+        self.parse_save_data_finetune(
+            input_dir_train=input_dir_train,
+            input_dir_val=input_dir_val,
+            required_exts=['.pdf'],
+            prompt_tmpl=prompt_tmpl,
+            save_train_path=save_train_path,
+            save_val_path=save_val_path
+        )
+        train_dataset, _ = self.load_finetune_data(
+            train_data_path=save_train_path,
+            val_data_path=self.out_dir_val
+        )
+        finetune_engine = self.get_sentence_transformer_finetune(
+            train_dataset=train_dataset,
+            model_output_path=save_val_path
+        )
+        finetune_engine.finetune()
+        embed_model_finetuned = finetune_engine.get_finetuned_model()
+        logger.debug("...Finetuning complete and finetuned model loaded")
+        return embed_model_finetuned
     
     def load_finetuned_model(self, embed_name: str, model_output_path: str):
             """ Load the finetuned model """

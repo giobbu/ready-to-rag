@@ -6,10 +6,10 @@ class EmbeddingSettings:
     # finetuning
     input_dir_train = "data/finetune-embed/train"
     input_dir_val = "data/finetune-embed/val"
-    out_dir_train = "save/train_dataset_gpt.json"
-    out_dir_val = "save/val_dataset_gpt.json"
-    finetuning = True
-    is_finetuned = True
+    out_dir_train = "save/gpt/train_dataset_gpt.json"
+    out_dir_val = "save/gpt/val_dataset_gpt.json"
+    run_finetuning = True
+    use_finetuned_model = True
     adapter = 'linear'
     model_output_path = "model/linear_adapter_model_output",
 
