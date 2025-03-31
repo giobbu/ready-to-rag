@@ -8,18 +8,14 @@ class EmbeddingSettings:
     input_dir_val = "data/finetune-embed/val"
     out_dir_train = "save/gpt/train_dataset_gpt.json"
     out_dir_val = "save/gpt/val_dataset_gpt.json"
-    run_finetuning = True
-    use_finetuned_model = True
+    run_finetuning = False
+    use_finetuned_model = False
     adapter = 'linear'
     model_output_path = "model/linear_adapter_model_output",
 
 @dataclass(frozen=True)
 class LLMSettings:
     llm_name = "gpt-3.5-turbo"
-
-@dataclass(frozen=True)
-class Settings:
-    sentence_splitter_chunk = 1000
 
 @dataclass(frozen=True)
 class PromptTemplate:
@@ -35,3 +31,8 @@ class PromptTemplate:
         You are a Teacher/ Professor. Your task is to setup {num_questions_per_chunk} questions for an upcoming quiz/examination.
         The questions should be diverse in nature across the document. Restrict the questions to the context information provided."
         """
+
+@dataclass(frozen=True)
+class Settings(EmbeddingSettings, LLMSettings, PromptTemplate):
+    sentence_splitter_chunk = 1000
+    list_tools = ['Base', 'Meta', 'Summary']  # ['Base', 'Meta', 'Summary']: the list of tools to be used for the embedding

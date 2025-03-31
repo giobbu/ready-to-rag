@@ -4,6 +4,7 @@
 ## What is RAG?
 RAG (Retrieval-Augmented Generation) is a technique that combines retrieval-based methods with generative models to produce more accurate and contextually relevant responses. It retrieves relevant documents from a large corpus and uses them to generate answers. In this example we used a basic RAG using LlamaIndex and Hugging Face models.
 
+# RAG for Scientific Paper in PDFs. 
 
 ## How to run the RAG
 
@@ -23,32 +24,36 @@ RAG (Retrieval-Augmented Generation) is a technique that combines retrieval-base
     python main.py --query "<query>"
     ```
 
-## Baseline
+## Basic RAG
 
 ```sh
 nano config.py
 ```
 
-In the`EmbeddingSettings` dataclass, if `finetuning` is set to `False`, the RAG will not fine-tune the embedding model.
+In the `Settings` set `run_finetuning` to `False` and `use_finetuned_model` to `True`, the RAG will give the following answer:
 
-### Example 
-- Query:
-> What does it mean 'Explainable Anomaly Detection'?
+- **Query**:
+> What is the paper about?
 
-- Response:
-> Explainable Anomaly Detection (EAD) is a new approach to anomaly dete-
-ction that aims to provide an explanation of the anomaly to the domain experts by providing a visualization of the anomaly's cause. EAD is based on explanation algorithms that provide a detailed explanation of the reason for the anomaly, enabling domain experts to better understand the anomaly and make informed decisions. In this paper, we provide an overview of the current state of EAD and discuss the limitations and challenges of using explanation algorithms in EAD.
+- **Response**:
+> The paper discusses a method for explaining anomalies detected by an autoencoder using SHAP values. It includes a flow chart illustrating the explanation process and a table showing contributing and offsetting anomaly features based on SHAP values.
 
-## Embedding Finetuning
+## Multi-index RAG
 
-If `finetuning` is set to `True`, the RAG  fine-tunes a linear adapter on top of the embedding model. 
+In the `Settings` by having `list_tools = ['Base', 'Meta', 'Summary']` the RAG will answer your questions by picking from different tools. 
+* `Base` tool to perform basic vector search base on the top-k most similar embeddings. 
+* `Meta` tool adds to `Base` the capability for metadata filtering. 
+* `Summary` tool to synthesize an answer from all text chunks.
 
-### Example
-- Query:
-> What does it mean 'Explainable Anomaly Detection'?
+Here an example (Keep `run_finetuning` to `False` and `use_finetuned_model` to `True`):
 
-- Response:
-> Explainable Anomaly Detection refers to the process of not only identifying anomalies in a system or dataset but also providing clear and understandable explanations for why those anomalies were detected. This approach aims to bridge the gap between detecting outliers and understanding domain-specific anomalies by offering insights into the reasons behind the anomalies. By providing explanations for anomalies, domain experts can better comprehend the detected anomalies, leading to increased trust in the anomaly detection system and facilitating decision-making based on the identified anomalies.
+- **Query**:
+> Summarize the Introduction section from page 2 to 4.
+
+- **Response**:
+> Deep learning algorithms, particularly autoencoders, have been increasingly utilized for various tasks, including anomaly detection. While these algorithms are effective at identifying anomalies, explaining their outputs can be challenging. Providing explanations for anomalies can enhance trust in the algorithm among domain experts. Explanations can be particularly useful in understanding why one event occurred instead of another, which is crucial for anomaly detection. The need for explanations per instance, rather than for the entire model, has gained importance as machine learning models have become more complex, especially in domains like autonomous vehicles and healthcare where understanding the decision-making process is essential.
+
+from logs: *`Calling function: metadata_vector_tool with args: {"query": "Introduction", "page_numbers": ["2", "3", "4"]}`*
 
 ## Evaluation (TODO)
 

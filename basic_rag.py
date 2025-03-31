@@ -58,40 +58,40 @@ class RAGgish:
         nodes = parser.get_nodes_from_documents(documents, show_progress=True)
         return nodes
     
-    def parse_save_data_finetune(self, 
+    def parse_files_to_QA_data(self, 
                                 input_dir_train, 
                                 input_dir_val, 
                                 required_exts, 
                                 prompt_tmpl,
                                 save_train_path, 
                                 save_val_path):
-        """ Parse and save data for finetuning """
-        logger.debug("- Load and parse data for training")
+        """ Parse and save QA data for finetuning """
+        logger.debug("- Load QA data for training")
         documents_train = self.load_data(input_dir_train, required_exts)
         nodes_train = self.parse_documents(documents_train)
-        logger.debug("- Load and parse data for validation")
+        logger.debug("- Load QA data for validation")
         documents_val = self.load_data(input_dir_val, required_exts)
         nodes_val = self.parse_documents(documents_val)
-        logger.debug("- Generate QA pairs - training")
+        logger.debug("- Parse QA pairs for training")
         prompts={}
         prompts["EN"] = prompt_tmpl
         generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
-                                                                model="gpt-3.5-turbo"),
+                                                                model=self.llm_name),
                                                                 nodes=nodes_train,
                                                                 qa_generate_prompt_tmpl = prompts["EN"],
                                                                 num_questions_per_chunk=1,
                                                                 output_path=save_train_path
                                                             )
-        logger.debug("- Generate QA pairs - validation")
+        logger.debug("- Parse QA pairs for validation")
         generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
-                                                                model="gpt-3.5-turbo"),
-                                                                nodes=nodes_val,
-                                                                qa_generate_prompt_tmpl = prompts["EN"],
-                                                                num_questions_per_chunk=1,
-                                                                output_path=save_val_path
-                                                            )
+                                            model=self.llm_name),
+                                            nodes=nodes_val,
+                                            qa_generate_prompt_tmpl = prompts["EN"],
+                                            num_questions_per_chunk=1,
+                                            output_path=save_val_path
+                                        )
     
-    def load_finetune_data(self, train_data_path, val_data_path):
+    def load_QA_data(self, train_data_path, val_data_path):
         " Load finetune data "
         logger.debug("Loading data for finetuning...")
         train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
@@ -119,20 +119,23 @@ class RAGgish:
                             input_dir_val,
                             prompt_tmpl,
                             save_train_path, 
-                            save_val_path):
+                            save_val_path,
+                            parse_files=False):
         """ Finetune the embeddings """
         logger.debug("Finetuning embeddings...")
-        self.parse_save_data_finetune(
-            input_dir_train=input_dir_train,
-            input_dir_val=input_dir_val,
-            required_exts=['.pdf'],
-            prompt_tmpl=prompt_tmpl,
-            save_train_path=save_train_path,
-            save_val_path=save_val_path
-        )
-        train_dataset, _ = self.load_finetune_data(
+
+        if parse_files:
+            self.parse_files_to_QA_data(
+                input_dir_train=input_dir_train,
+                input_dir_val=input_dir_val,
+                required_exts=['.pdf'],
+                prompt_tmpl=prompt_tmpl,
+                save_train_path=save_train_path,
+                save_val_path=save_val_path
+            )
+        train_dataset, _ = self.load_QA_data(
             train_data_path=save_train_path,
-            val_data_path=self.out_dir_val
+            val_data_path=save_val_path
         )
         finetune_engine = self.get_sentence_transformer_finetune(
             train_dataset=train_dataset,
@@ -152,7 +155,7 @@ class RAGgish:
                                 )
             return embed_model_finetuned
 
-    def create_index(self, nodes, embed_model):
+    def create_vector_index(self, nodes, embed_model):
         " Create a vector store index "
         logger.debug("Creating VectorStoreIndex...")
         index = VectorStoreIndex(
@@ -164,14 +167,91 @@ class RAGgish:
         logger.debug("...VectorStoreIndex created")
         return index
     
-    def create_query_engine(self, index):
-        " Create a query engine "
-        self.query_engine = index.as_query_engine()
-        logger.debug("Created QueryEngine")
+    def create_summary_index(self, nodes, embed_model):
+        " Create a summary index "
+        from llama_index.core import SummaryIndex
+        logger.debug("Creating SummaryIndex...")
+        index = SummaryIndex(nodes=nodes,
+                            embed_model=embed_model,
+                            show_progress=True)
+        logger.debug("...SummaryIndex created")
+        return index
 
-    def answer(self, query):
-        " Query the QA engine "
-        response = self.query_engine.query(query)
+    def create_base_query_tool(self, index):
+        " Create a base query tool "
+        from llama_index.core.tools import FunctionTool
+
+        def vector_query(query: str) -> str:
+            " Query the index "
+            query_engine = index.as_query_engine()
+            response = query_engine.query(query)
+            return response
+        
+        vector_query_tool = FunctionTool.from_defaults(
+                                    name="vector_tool",
+                                    fn=vector_query,
+                                    description=(
+                                        "Useful if you want to get "
+                                        "basic answers to your queries. "
+                                    ))
+        logger.debug("Created Vector QueryEngine Tool")
+        return vector_query_tool
+
+    def create_metadata_query_tool(self, index):
+        " Create a metadata query engine "
+        from llama_index.core.vector_stores import MetadataFilters
+        from llama_index.core.vector_stores import FilterCondition
+        from llama_index.core.tools import FunctionTool
+        from typing import List
+
+        def metadata_vector_query(query: str, page_numbers: List[str]) -> str:
+            " Query the index with metadata filters "
+            meta_data = [{"key": "page_label", "value": p} for p in page_numbers]
+            query_engine = index.as_query_engine(
+                filters= MetadataFilters.from_dicts(
+                meta_data,
+                condition=FilterCondition.OR)
+            )
+            response = query_engine.query(query)
+            return response
+        
+        metadata_vector_query_tool = FunctionTool.from_defaults(
+                                    name="metadata_vector_tool",
+                                    fn=metadata_vector_query,
+                                    description=(
+                                        "Useful if you want to get metadata "
+                                        "based on page numbers. "
+                                    ))
+        logger.debug("Created Metadata QueryEngine Tool")
+        return metadata_vector_query_tool
+
+    def create_summary_query_tool(self, summary_index):
+        " Create a summary query engine "
+        from llama_index.core.tools import QueryEngineTool
+        summary_query_engine = summary_index.as_query_engine(
+            response_mode="tree_summarize",
+            use_async=True,
+        )
+        summary_tool = QueryEngineTool.from_defaults(
+            name="summary_tool",
+            query_engine=summary_query_engine,
+            description=(
+                "Useful if you want to get a summary of the scientific paper. "
+            ),
+        )
+        logger.debug("Created Summary QueryEngine Tool")
+        return summary_tool
+
+    def answer(self, query, list_tools=None):
+        """ Answer the query by employing differnt tools """
+        llm = OpenAI(temperature=0.0, model=self.llm_name)
+        if len(list_tools) == 0:
+            raise ValueError("No tools provided. Please check the config file.")
+        elif len(list_tools) > 3:
+            raise ValueError("Too many tools provided. Please check the config file.")
+        response = llm.predict_and_call(list_tools,
+                                            query, 
+                                            verbose=True)
         logger.info("__________________________________________________________")
         logger.info("\n")
         logger.info(f'Query: \n >>> {query}')
@@ -179,3 +259,7 @@ class RAGgish:
         logger.info("__________________________________________________________")
         logger.info("\n")
         return response
+        
+
+
+
