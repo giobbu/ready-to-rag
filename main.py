@@ -15,26 +15,25 @@ if __name__== "__main__":
         raise ValueError("Please provide a query string using the --query flag")
     
     logger.info('Loading Raggish model...')
-    basic_rag = RAGgish(embed_name=Settings.embed_name,
-                    llm_name=Settings.llm_name,
-                    chunk_size=Settings.sentence_splitter_chunk
-                    )
+    basic_rag = RAGgish(embed_name=Settings.embed_name, llm_name=Settings.llm_name)
     if Settings.run_finetuning:
         if not exist_QA_files(Settings):
+            parse_file = True
             embed_model_finetuned = basic_rag.finetune_embeddings(input_dir_train=Settings.input_dir_train,
                             input_dir_val=Settings.input_dir_val, 
                             prompt_tmpl=Settings.prompt_tmpl,
                             save_train_path=Settings.out_dir_train,
                             save_val_path=Settings.out_dir_val,
-                            parse_files=True)
+                            parse_files=parse_file)
             logger.info('Finetuning completed. Please check the output files.')
         else:
+            parse_file = False
             embed_model_finetuned = basic_rag.finetune_embeddings(input_dir_train=Settings.input_dir_train,
-                            input_dir_val=Settings.input_dir_val, 
-                            prompt_tmpl=Settings.prompt_tmpl,
-                            save_train_path=Settings.out_dir_train,
-                            save_val_path=Settings.out_dir_val,
-                            parse_files=False)
+                                                                    input_dir_val=Settings.input_dir_val, 
+                                                                    prompt_tmpl=Settings.prompt_tmpl,
+                                                                    save_train_path=Settings.out_dir_train,
+                                                                    save_val_path=Settings.out_dir_val,
+                                                                    parse_files=parse_file)
             logger.info('Finetuning completed. Please check the output files.')
     else:
         try:
@@ -49,10 +48,11 @@ if __name__== "__main__":
     logger.info('----------------- Testing ---------------------------')
     
     logger.info('Loading data...')
-    documents = basic_rag.load_data(input_dir="data/", required_exts=[".pdf"])  # Load data
+    documents = basic_rag.load_data(input_dir=Settings.input_dir_test,
+                                    required_exts=[".pdf"])  # Load data
     
     logger.info('Parsing documents...')
-    nodes = basic_rag.parse_documents(documents)  # Parse documents into nodes
+    nodes = basic_rag.parse_documents(documents, chunk_size=Settings.sentence_splitter_chunk)  # Parse documents into nodes
     
     logger.info('Creating indexes...')
     if Settings.use_finetuned_model:

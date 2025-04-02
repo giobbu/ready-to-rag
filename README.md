@@ -55,7 +55,15 @@ Here an example (Keep `run_finetuning` to `False` and `use_finetuned_model` to `
 
 from logs: *`Calling function: metadata_vector_tool with args: {"query": "Introduction", "page_numbers": ["2", "3", "4"]}`*
 
-## Evaluation (TODO)
+## Evaluation
+
+### Embedding
+
+#### `BAAI/bge-small-en-v1.5` WITHOUT finetuning
+<img src="imgs/baseline_eval_results.png" style="vertical-align: middle;">
+
+#### `BAAI/bge-small-en-v1.5` WITH finetuning
+<img src="imgs/finetuned_eval_results.png" style="vertical-align: middle;">
 
 ## Hyperparameters Evaluation (TODO)
 

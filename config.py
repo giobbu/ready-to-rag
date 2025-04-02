@@ -6,6 +6,7 @@ class EmbeddingSettings:
     # finetuning
     input_dir_train = "data/finetune-embed/train"
     input_dir_val = "data/finetune-embed/val"
+    input_dir_test = "data/"
     out_dir_train = "save/gpt/train_dataset_gpt.json"
     out_dir_val = "save/gpt/val_dataset_gpt.json"
     run_finetuning = False
@@ -36,3 +37,11 @@ class PromptTemplate:
 class Settings(EmbeddingSettings, LLMSettings, PromptTemplate):
     sentence_splitter_chunk = 1000
     list_tools = ['Base', 'Meta', 'Summary']  # ['Base', 'Meta', 'Summary']: the list of tools to be used for the embedding
+
+@dataclass(frozen=True)
+class EvalSettings:
+    embed_name = "BAAI/bge-small-en-v1.5"
+    finetune = True
+    path_finetuned = "model/linear_adapter_model_output"
+    top_k = 2
+    dataset_type_list = ['train', 'val']

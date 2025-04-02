@@ -18,12 +18,11 @@ os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 class RAGgish:
     " RAG model for question answering "
-    def __init__(self, embed_name, llm_name, chunk_size=1000):
+    def __init__(self, embed_name, llm_name):
         self.embed_name = embed_name
         self.llm_name = llm_name
         self._set_embed_model
         self._set_llm_model
-        self.chunk_size = chunk_size
 
     @property
     def _set_embed_model(self):
@@ -51,10 +50,10 @@ class RAGgish:
         logger.debug(f"Loaded {len(documents)} documents")
         return documents
     
-    def parse_documents(self, documents):
+    def parse_documents(self, documents, chunk_size):
         " Parse documents into nodes"
         logger.debug("Parsing documents into nodes...")
-        parser = SentenceSplitter(chunk_size=self.chunk_size)
+        parser = SentenceSplitter(chunk_size=chunk_size)
         nodes = parser.get_nodes_from_documents(documents, show_progress=True)
         return nodes
     
