@@ -244,6 +244,7 @@ class RAGgish:
 
     def answer(self, query, list_tools=None):
         """ Answer the query by employing differnt tools """
+        from llama_index.core.evaluation import FaithfulnessEvaluator
         llm = OpenAI(temperature=0.0, model=self.llm_name)
         if len(list_tools) == 0:
             raise ValueError("No tools provided. Please check the config file.")
@@ -252,12 +253,16 @@ class RAGgish:
         response = llm.predict_and_call(list_tools,
                                             query, 
                                             verbose=True)
+        evaluator = FaithfulnessEvaluator(llm=llm)
+        eval_result = evaluator.evaluate_response(response=response)
+        
         logger.info("__________________________________________________________")
         logger.info("\n")
         logger.info(f'Query: \n >>> {query}')
         logger.info(f"Response: \n >>> {response}")
         logger.info("__________________________________________________________")
         logger.info("\n")
+        logger.info(f"Evaluation score >>> {eval_result.score}")
         return response
         
 
