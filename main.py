@@ -22,8 +22,10 @@ if __name__== "__main__":
             embed_model_finetuned = basic_rag.finetune_embeddings(input_dir_train=Settings.input_dir_train,
                             input_dir_val=Settings.input_dir_val, 
                             prompt_tmpl=Settings.prompt_tmpl,
+                            chunk_size=Settings.sentence_splitter_chunk,
                             save_train_path=Settings.out_dir_train,
                             save_val_path=Settings.out_dir_val,
+                            save_model_path=Settings.model_output_path,
                             parse_files=parse_file)
             logger.info('Finetuning completed. Please check the output files.')
         else:
@@ -31,8 +33,10 @@ if __name__== "__main__":
             embed_model_finetuned = basic_rag.finetune_embeddings(input_dir_train=Settings.input_dir_train,
                                                                     input_dir_val=Settings.input_dir_val, 
                                                                     prompt_tmpl=Settings.prompt_tmpl,
+                                                                    chunk_size=Settings.sentence_splitter_chunk,
                                                                     save_train_path=Settings.out_dir_train,
                                                                     save_val_path=Settings.out_dir_val,
+                                                                    save_model_path=Settings.model_output_path,
                                                                     parse_files=parse_file)
             logger.info('Finetuning completed. Please check the output files.')
     else:
@@ -52,7 +56,8 @@ if __name__== "__main__":
                                     required_exts=[".pdf"])  # Load data
     
     logger.info('Parsing documents...')
-    nodes = basic_rag.parse_documents(documents, chunk_size=Settings.sentence_splitter_chunk)  # Parse documents into nodes
+    nodes = basic_rag.parse_documents(documents, 
+                                    chunk_size=Settings.sentence_splitter_chunk)  # Parse documents into nodes
     
     logger.info('Creating indexes...')
     if Settings.use_finetuned_model:

@@ -62,15 +62,16 @@ class RAGgish:
                                 input_dir_val, 
                                 required_exts, 
                                 prompt_tmpl,
+                                chunk_size,
                                 save_train_path, 
                                 save_val_path):
         """ Parse and save QA data for finetuning """
         logger.debug("- Load QA data for training")
         documents_train = self.load_data(input_dir_train, required_exts)
-        nodes_train = self.parse_documents(documents_train)
+        nodes_train = self.parse_documents(documents_train, chunk_size)
         logger.debug("- Load QA data for validation")
         documents_val = self.load_data(input_dir_val, required_exts)
-        nodes_val = self.parse_documents(documents_val)
+        nodes_val = self.parse_documents(documents_val, chunk_size)
         logger.debug("- Parse QA pairs for training")
         prompts={}
         prompts["EN"] = prompt_tmpl
@@ -117,8 +118,10 @@ class RAGgish:
                             input_dir_train, 
                             input_dir_val,
                             prompt_tmpl,
+                            chunk_size,
                             save_train_path, 
                             save_val_path,
+                            save_model_path,
                             parse_files=False):
         """ Finetune the embeddings """
         logger.debug("Finetuning embeddings...")
@@ -129,6 +132,7 @@ class RAGgish:
                 input_dir_val=input_dir_val,
                 required_exts=['.pdf'],
                 prompt_tmpl=prompt_tmpl,
+                chunk_size=chunk_size,
                 save_train_path=save_train_path,
                 save_val_path=save_val_path
             )
@@ -138,7 +142,7 @@ class RAGgish:
         )
         finetune_engine = self.get_sentence_transformer_finetune(
             train_dataset=train_dataset,
-            model_output_path=save_val_path
+            model_output_path=save_model_path[0]
         )
         finetune_engine.finetune()
         embed_model_finetuned = finetune_engine.get_finetuned_model()
@@ -243,18 +247,20 @@ class RAGgish:
 
     def answer(self, query, list_tools=None):
         """ Answer the query by employing differnt tools """
-        from llama_index.core.evaluation import FaithfulnessEvaluator
         llm = OpenAI(temperature=0.0, model=self.llm_name)
         if len(list_tools) == 0:
             raise ValueError("No tools provided. Please check the config file.")
         elif len(list_tools) > 3:
             raise ValueError("Too many tools provided. Please check the config file.")
-        response = llm.predict_and_call(list_tools,
-                                            query, 
-                                            verbose=True)
+        
+        response = llm.predict_and_call(list_tools,  
+                                        query,
+                                        verbose=True)
+
+        from llama_index.core.evaluation import FaithfulnessEvaluator
         evaluator = FaithfulnessEvaluator(llm=llm)
         eval_result = evaluator.evaluate_response(response=response)
-        
+
         logger.info("__________________________________________________________")
         logger.info("\n")
         logger.info(f'Query: \n >>> {query}')
