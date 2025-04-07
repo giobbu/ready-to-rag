@@ -7,12 +7,12 @@ class EmbeddingSettings(BaseModel):
     input_dir_train: str = "data/finetune-embed/train"
     input_dir_val: str = "data/finetune-embed/val"
     input_dir_test: str = "data/"
-    out_dir_train: str = "save/gpt/train_dataset_gpt.json"
-    out_dir_val: str = "save/gpt/val_dataset_gpt.json"
+    out_dir_train: str = "save/qa/train_dataset_gpt.json"
+    out_dir_val: str = "save/qa/val_dataset_gpt.json"
     run_finetuning: bool = False
     use_finetuned_model: bool = True
     adapter: str = "linear"
-    model_output_path: str = "model/linear_adapter_model_output"
+    model_output_path: str = "save/embedding/baai/linear_adapter_model_output"
 
 class LLMSettings(BaseModel):
     llm_name: str = "gpt-3.5-turbo"
@@ -33,11 +33,11 @@ class PromptTemplate(BaseModel):
 
 class Settings(EmbeddingSettings, LLMSettings, PromptTemplate):
     sentence_splitter_chunk: int = 1000
-    list_tools: List[str] = ["Base"]  # Could be ['Base', 'Meta', 'Summary']
+    list_tools: List[str] = ["Base", "Meta", "Summary"]  # Could be ['Base', 'Meta', 'Summary']
 
 class EvalSettings(BaseModel):
     embed_name: str = "BAAI/bge-small-en-v1.5"
     finetune: bool = True
-    path_finetuned: str = "model/linear_adapter_model_output"
+    path_finetuned: str = "save/embedding/baai/linear_adapter_model_output"
     top_k: int = 2
     dataset_type_list: List[str] = ['train', 'val']
