@@ -15,6 +15,6 @@ class BasicOutput(BaseModel):
 class MetaVectorOutput(BasicOutput):
     """Output containing the response, page numbers, and confidence."""
     page_numbers: List[int] = Field(...,
-                                    description="The page numbers of the sources used to answer this question. Do not include a page number if the context is irrelevant.",
+        description="The page numbers of the sources used to answer this question. Do not include a page number if the context is irrelevant.",
     )
 

@@ -1,5 +1,5 @@
 from basic_rag import RAGgish
-from config import Settings
+from config.setting import Settings
 from loguru import logger
 import argparse
 from utils import exist_QA_files

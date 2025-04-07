@@ -9,7 +9,7 @@ import nest_asyncio
 import asyncio
 import pandas as pd
 
-from config import EvalSettings
+from config.setting import EvalSettings
 params = EvalSettings()
 
 nest_asyncio.apply()

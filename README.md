@@ -27,7 +27,7 @@ RAG (Retrieval-Augmented Generation) is a technique that combines retrieval-base
 ## Basic RAG
 
 ```sh
-nano config.py
+nano config/setting.py
 ```
 
 In the `Settings` set `run_finetuning` to `False` and `use_finetuned_model` to `True`, the RAG will give the following answer:
@@ -37,8 +37,6 @@ In the `Settings` set `run_finetuning` to `False` and `use_finetuned_model` to `
 
 - **Response**:
 > The paper discusses a method for explaining anomalies detected by an autoencoder using SHAP values. It includes a flow chart illustrating the explanation process and a table showing contributing and offsetting anomaly features based on SHAP values.
-
-## Multi-index RAG
 
 In the `Settings` by having `list_tools = ['Base', 'Meta', 'Summary']` the RAG will answer your questions by picking from different tools. 
 * `Base` tool to perform basic vector search base on the top-k most similar embeddings. 
