@@ -10,6 +10,7 @@ import asyncio
 import pandas as pd
 
 from config import EvalSettings
+params = EvalSettings()
 
 nest_asyncio.apply()
 async def evaluate(dataset_path: str, embed_model: str = None, top_k: int = 1, finetune:bool = False, path_finetuned: str = None) -> list:
@@ -17,9 +18,7 @@ async def evaluate(dataset_path: str, embed_model: str = None, top_k: int = 1, f
     dataset = EmbeddingQAFinetuneDataset.from_json(dataset_path)
     corpus = dataset.corpus
     embed_model = embed_model or Settings.embed_model
-
     nodes = [TextNode(id_=id_, text=text) for id_, text in corpus.items()]
-
     if finetune:
         base_embed_model = resolve_embed_model(embed_model)
         embed_model_finetuned = AdapterEmbeddingModel(
@@ -78,11 +77,11 @@ def run_evaluator(name:str,
     return df_results
 
 if __name__ == "__main__":
-    df_results = run_evaluator(name = EvalSettings.embed_name, 
-                                dataset_type_list= EvalSettings.dataset_type_list, 
-                                top_k= EvalSettings.top_k, 
-                                finetune=EvalSettings.finetune, 
-                                path_finetuned=EvalSettings.path_finetuned)
+    df_results = run_evaluator(name = params.embed_name, 
+                                dataset_type_list= params.dataset_type_list, 
+                                top_k= params.top_k, 
+                                finetune=params.finetune, 
+                                path_finetuned=params.path_finetuned)
 
     # plot stacked bar chart for train and val and for each metric in one plot
     import matplotlib.pyplot as plt
@@ -95,17 +94,17 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     sns.set_theme(style="whitegrid")
     sns.barplot(x="metric", y="value", hue="data", data=df_melt)
-    if EvalSettings.finetune:
-        plt.title(f"Evaluation Results for Finetuned {EvalSettings.embed_name} with top-k {EvalSettings.top_k}")
+    if params.finetune:
+        plt.title(f"Evaluation Results for Finetuned {params.embed_name} with top-k {params.top_k}")
     else:
-        plt.title(f"Evaluation Results for {EvalSettings.embed_name} with top-k {EvalSettings.top_k}")
+        plt.title(f"Evaluation Results for {params.embed_name} with top-k {params.top_k}")
     plt.xlabel("Metric")
     plt.ylabel("Value")
     plt.legend(title="Data")
     plt.xticks(rotation=45)
     plt.tight_layout()
     # save
-    if EvalSettings.finetune:
+    if params.finetune:
         plt.savefig(f"imgs/finetuned_eval_results.png")
     else:
         plt.savefig(f"imgs/baseline_eval_results.png")
