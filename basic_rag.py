@@ -9,11 +9,13 @@ from llama_index.core.evaluation import EmbeddingQAFinetuneDataset
 from llama_index.finetuning import EmbeddingAdapterFinetuneEngine
 from llama_index.core.embeddings.utils import resolve_embed_model
 from llama_index.embeddings.adapter import AdapterEmbeddingModel
-
 from llama_index.llms.openai import OpenAI
+
+from models.output import BasicOutput, MetaVectorOutput
+
 from dotenv import load_dotenv
-load_dotenv()
 import os
+load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 class RAGgish:
@@ -186,7 +188,9 @@ class RAGgish:
 
         def vector_query(query: str) -> str:
             " Query the index "
-            query_engine = index.as_query_engine()
+            llm = OpenAI(temperature=0.0, model=self.llm_name)
+            structured_llm = llm.as_structured_llm(output_cls=BasicOutput)
+            query_engine = index.as_query_engine(llm=structured_llm)
             response = query_engine.query(query)
             return response
         
@@ -209,8 +213,11 @@ class RAGgish:
 
         def metadata_vector_query(query: str, page_numbers: List[str]) -> str:
             " Query the index with metadata filters "
+            llm = OpenAI(temperature=0.0, model=self.llm_name)
+            structured_llm = llm.as_structured_llm(output_cls=MetaVectorOutput)
             meta_data = [{"key": "page_label", "value": p} for p in page_numbers]
             query_engine = index.as_query_engine(
+                llm=structured_llm,
                 filters= MetadataFilters.from_dicts(
                 meta_data,
                 condition=FilterCondition.OR)
@@ -231,7 +238,10 @@ class RAGgish:
     def create_summary_query_tool(self, summary_index):
         " Create a summary query engine "
         from llama_index.core.tools import QueryEngineTool
+        llm = OpenAI(temperature=0.0, model=self.llm_name)
+        structured_llm = llm.as_structured_llm(output_cls=BasicOutput)
         summary_query_engine = summary_index.as_query_engine(
+            llm=structured_llm,
             response_mode="tree_summarize",
             use_async=True,
         )
@@ -247,28 +257,33 @@ class RAGgish:
 
     def answer(self, query, list_tools=None):
         """ Answer the query by employing differnt tools """
+        import json
         llm = OpenAI(temperature=0.0, model=self.llm_name)
         if len(list_tools) == 0:
             raise ValueError("No tools provided. Please check the config file.")
         elif len(list_tools) > 3:
             raise ValueError("Too many tools provided. Please check the config file.")
-        
         response = llm.predict_and_call(list_tools,  
                                         query,
                                         verbose=True)
-
-        from llama_index.core.evaluation import FaithfulnessEvaluator
-        evaluator = FaithfulnessEvaluator(llm=llm)
-        eval_result = evaluator.evaluate_response(response=response)
-
         logger.info("__________________________________________________________")
         logger.info("\n")
         logger.info(f'Query: \n >>> {query}')
         logger.info(f"Response: \n >>> {response}")
         logger.info("__________________________________________________________")
         logger.info("\n")
-        logger.info(f"Evaluation score >>> {eval_result.score}")
-        return response
+        response_dict = json.loads(response.response)
+        if response_dict['confidence'] > 0.9:
+            logger.success(f"Response is correct with confidence: {response_dict['confidence']}")
+        elif response_dict['confidence'] > 0.8:
+            logger.warning(f"Response is correct with confidence: {response_dict['confidence']}")
+            logger.warning(f"Confidence explanation: {response_dict['confidence_explanation']}")
+        else:
+            logger.error(f"Response is incorrect with confidence: {response_dict['confidence']}")
+            logger.error(f"Confidence explanation: {response_dict['confidence_explanation']}")
+            logger.error("Please check the query and try again.")
+        logger.info("__________________________________________________________")
+        return response_dict
         
 
 
