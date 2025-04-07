@@ -150,7 +150,7 @@ class RAGgish:
             base_embed_model = resolve_embed_model(f"local:{embed_name}")
             embed_model_finetuned = AdapterEmbeddingModel(
                                     base_embed_model,
-                                    adapter_path=model_output_path[0],
+                                    adapter_path=model_output_path,
                                 )
             return embed_model_finetuned
 
