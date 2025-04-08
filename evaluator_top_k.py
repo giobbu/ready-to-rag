@@ -53,7 +53,7 @@ def display_results(name:str, data:str, top: str, eval_results: list) -> pd.Data
     metric_df = pd.DataFrame(columns)
     return metric_df
 
-def run_evaluator(name:str,
+def run_evaluator_top_k(name:str,
                 dataset_type_list:list,
                 top_k:int, 
                 finetune:bool = False, 
@@ -80,7 +80,7 @@ def run_evaluator(name:str,
     return df_results
 
 if __name__ == "__main__":
-    df_results = run_evaluator(name = params.embed_name, 
+    df_results = run_evaluator_top_k(name = params.embed_name, 
                                 dataset_type_list= params.dataset_type_list, 
                                 top_k= params.top_k, 
                                 finetune=params.finetune, 
