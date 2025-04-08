@@ -18,6 +18,9 @@ import os
 load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
+from config.logging_setting import setup_logger
+logger = setup_logger()
+
 class RAGgish:
     " RAG model for question answering "
     def __init__(self, embed_name, llm_name):
@@ -28,7 +31,7 @@ class RAGgish:
 
     @property
     def _set_embed_model(self):
-        """ Set the embedding model """
+        """ Set Embedding model """
         try:
             self.embed_model = HuggingFaceEmbedding(model_name=self.embed_name)
         except:
@@ -37,7 +40,7 @@ class RAGgish:
 
     @property
     def _set_llm_model(self):
-        """ Set the LLM model """
+        """ Set LLM model """
         try: 
             Settings.llm = OpenAI(temperature=0.0, model=self.llm_name)
         except:
@@ -54,7 +57,6 @@ class RAGgish:
     
     def parse_documents(self, documents, chunk_size):
         " Parse documents into nodes"
-        logger.debug("Parsing documents into nodes...")
         parser = SentenceSplitter(chunk_size=chunk_size)
         nodes = parser.get_nodes_from_documents(documents, show_progress=True)
         return nodes
@@ -95,15 +97,14 @@ class RAGgish:
     
     def load_QA_data(self, train_data_path, val_data_path):
         " Load finetune data "
-        logger.debug("Loading data for finetuning...")
+        logger.debug("Loading data for finetuning")
         train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
         val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
-        logger.debug("...data loaded")
         return train_dataset, val_dataset
         
     def get_sentence_transformer_finetune(self, train_dataset, model_output_path):
         " Get the finetune engine "
-        logger.debug('...Loading base embedding model and setting up finetuning engine')
+        logger.debug('Loading base embedding model and setting up finetuning engine')
         base_embed_model = resolve_embed_model(f"local:{self.embed_name}")
         finetuned_engine = EmbeddingAdapterFinetuneEngine(
             train_dataset,
@@ -113,7 +114,6 @@ class RAGgish:
             epochs=10,
             verbose=True,
         )
-        logger.debug('...Engine Fine-tuned')
         return finetuned_engine
     
     def finetune_embeddings(self, 
@@ -126,8 +126,6 @@ class RAGgish:
                             save_model_path,
                             parse_files=False):
         """ Finetune the embeddings """
-        logger.debug("Finetuning embeddings...")
-
         if parse_files:
             self.parse_files_to_QA_data(
                 input_dir_train=input_dir_train,
@@ -144,11 +142,10 @@ class RAGgish:
         )
         finetune_engine = self.get_sentence_transformer_finetune(
             train_dataset=train_dataset,
-            model_output_path=save_model_path[0]
+            model_output_path=save_model_path
         )
         finetune_engine.finetune()
         embed_model_finetuned = finetune_engine.get_finetuned_model()
-        logger.debug("...Finetuning complete and finetuned model loaded")
         return embed_model_finetuned
     
     def load_finetuned_model(self, embed_name: str, model_output_path: str):
@@ -162,24 +159,22 @@ class RAGgish:
 
     def create_vector_index(self, nodes, embed_model):
         " Create a vector store index "
-        logger.debug("Creating VectorStoreIndex...")
+        logger.debug("* Creating VectorStore Index")
         index = VectorStoreIndex(
         nodes=nodes, 
         embed_model=embed_model, 
         insert_batch_size=1000,
         show_progress=True
         )
-        logger.debug("...VectorStoreIndex created")
         return index
     
     def create_summary_index(self, nodes, embed_model):
         " Create a summary index "
         from llama_index.core import SummaryIndex
-        logger.debug("Creating SummaryIndex...")
+        logger.debug("* Creating Summary Index")
         index = SummaryIndex(nodes=nodes,
                             embed_model=embed_model,
                             show_progress=True)
-        logger.debug("...SummaryIndex created")
         return index
 
     def create_base_query_tool(self, index):
@@ -201,7 +196,7 @@ class RAGgish:
                                         "Useful if you want to get "
                                         "basic answers to your queries. "
                                     ))
-        logger.debug("Created Vector QueryEngine Tool")
+        logger.debug("- Created Vector QueryEngine Tool")
         return vector_query_tool
 
     def create_metadata_query_tool(self, index):
@@ -232,7 +227,7 @@ class RAGgish:
                                         "Useful if you want to get metadata "
                                         "based on page numbers. "
                                     ))
-        logger.debug("Created Metadata QueryEngine Tool")
+        logger.debug("- Created Metadata QueryEngine Tool")
         return metadata_vector_query_tool
 
     def create_summary_query_tool(self, summary_index):
@@ -252,7 +247,7 @@ class RAGgish:
                 "Useful if you want to get a summary of the scientific paper. "
             ),
         )
-        logger.debug("Created Summary QueryEngine Tool")
+        logger.debug("- Created Summary QueryEngine Tool")
         return summary_tool
 
     def answer(self, query, list_tools=None):
@@ -268,8 +263,8 @@ class RAGgish:
                                         verbose=True)
         logger.info("__________________________________________________________")
         logger.info("\n")
-        logger.info(f'Query: \n >>> {query}')
-        logger.info(f"Response: \n >>> {response}")
+        logger.info(f'Query: {query}')
+        logger.info(f"Response: {response}")
         logger.info("__________________________________________________________")
         logger.info("\n")
         response_dict = json.loads(response.response)

@@ -9,7 +9,7 @@ class EmbeddingSettings(BaseModel):
     input_dir_test: str = "data/"
     out_dir_train: str = "save/qa/train_dataset_gpt.json"
     out_dir_val: str = "save/qa/val_dataset_gpt.json"
-    run_finetuning: bool = False
+    run_finetuning: bool = True
     use_finetuned_model: bool = True
     adapter: str = "linear"
     model_output_path: str = "save/embedding/baai/linear_adapter_model_output"
