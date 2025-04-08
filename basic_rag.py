@@ -26,10 +26,7 @@ class RAGgish:
     def __init__(self, embed_name, llm_name):
         self.embed_name = embed_name
         self.llm_name = llm_name
-        self._set_embed_model
-        self._set_llm_model
 
-    @property
     def _set_embed_model(self):
         """ Set Embedding model """
         try:
@@ -38,14 +35,23 @@ class RAGgish:
             raise ValueError(f"Error loading embedding model: {self.embed_name}")
         logger.debug(f"Loaded embedding model: {self.embed_name}")
 
-    @property
     def _set_llm_model(self):
         """ Set LLM model """
         try: 
-            Settings.llm = OpenAI(temperature=0.0, model=self.llm_name)
+            llm = OpenAI(temperature=0.0, model=self.llm_name)
         except:
             raise ValueError(f"Error loading LLM model: {self.llm_name}")
         logger.debug(f"Loaded LLM model: {self.llm_name}")
+        return llm
+
+    def _set_QA_llm(self, llm_name):
+        """ Set LLM model for QA """
+        try:
+            llm = OpenAI(temperature=0.0, model=llm_name)
+        except:
+            raise ValueError(f"Error loading LLM model: {llm_name}")
+        logger.debug(f"Loaded LLM model for QA: {llm_name}")
+        return llm
 
     def load_data(self, input_dir, required_exts):
         " Load data from input_dir "
@@ -79,25 +85,23 @@ class RAGgish:
         logger.debug("- Parse QA pairs for training")
         prompts={}
         prompts["EN"] = prompt_tmpl
-        generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
-                                                                model=self.llm_name),
-                                                                nodes=nodes_train,
-                                                                qa_generate_prompt_tmpl = prompts["EN"],
-                                                                num_questions_per_chunk=1,
-                                                                output_path=save_train_path
+        generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
+                                        nodes=nodes_train,
+                                        qa_generate_prompt_tmpl = prompts["EN"],
+                                        num_questions_per_chunk=1,
+                                        output_path=save_train_path
                                                             )
         logger.debug("- Parse QA pairs for validation")
-        generate_qa_embedding_pairs(llm=OpenAI(temperature=0.0, 
-                                            model=self.llm_name),
-                                            nodes=nodes_val,
-                                            qa_generate_prompt_tmpl = prompts["EN"],
-                                            num_questions_per_chunk=1,
-                                            output_path=save_val_path
+        generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
+                                        nodes=nodes_val,
+                                        qa_generate_prompt_tmpl = prompts["EN"],
+                                        num_questions_per_chunk=1,
+                                        output_path=save_val_path
                                         )
     
     def load_QA_data(self, train_data_path, val_data_path):
         " Load finetune data "
-        logger.debug("Loading data for finetuning")
+        logger.debug("Loading QA data for finetuning")
         train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
         val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
         return train_dataset, val_dataset
@@ -157,23 +161,23 @@ class RAGgish:
                                 )
             return embed_model_finetuned
 
-    def create_vector_index(self, nodes, embed_model):
+    def create_vector_index(self, nodes, embed_model=None):
         " Create a vector store index "
         logger.debug("* Creating VectorStore Index")
         index = VectorStoreIndex(
         nodes=nodes, 
-        embed_model=embed_model, 
+        embed_model=self._set_embed_model() if embed_model is None else embed_model,
         insert_batch_size=1000,
         show_progress=True
         )
         return index
     
-    def create_summary_index(self, nodes, embed_model):
+    def create_summary_index(self, nodes, embed_model=None):
         " Create a summary index "
         from llama_index.core import SummaryIndex
         logger.debug("* Creating Summary Index")
         index = SummaryIndex(nodes=nodes,
-                            embed_model=embed_model,
+                            embed_model=self._set_embed_model() if embed_model is None else embed_model,
                             show_progress=True)
         return index
 
@@ -253,7 +257,7 @@ class RAGgish:
     def answer(self, query, list_tools=None):
         """ Answer the query by employing differnt tools """
         import json
-        llm = OpenAI(temperature=0.0, model=self.llm_name)
+        llm = self._set_llm_model()
         if len(list_tools) == 0:
             raise ValueError("No tools provided. Please check the config file.")
         elif len(list_tools) > 3:
