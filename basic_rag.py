@@ -264,18 +264,18 @@ class RAGgish:
         logger.info("__________________________________________________________")
         logger.info("\n")
         logger.info(f'Query: {query}')
-        logger.info(f"Response: {response}")
+        logger.info(f"Structured Output: {response}")
         logger.info("__________________________________________________________")
-        logger.info("\n")
         response_dict = json.loads(response.response)
+        logger.info(f'Response: {response_dict["response"]}')
         if response_dict['confidence'] > 0.9:
-            logger.success(f"Response is correct with confidence: {response_dict['confidence']}")
+            logger.success(f"Confidence Score: {response_dict['confidence']}")
         elif response_dict['confidence'] > 0.8:
-            logger.warning(f"Response is correct with confidence: {response_dict['confidence']}")
-            logger.warning(f"Confidence explanation: {response_dict['confidence_explanation']}")
+            logger.warning(f"Confidence Score: {response_dict['confidence']}")
+            logger.warning(f"Confidence Explanation: {response_dict['confidence_explanation']}")
         else:
-            logger.error(f"Response is incorrect with confidence: {response_dict['confidence']}")
-            logger.error(f"Confidence explanation: {response_dict['confidence_explanation']}")
+            logger.error(f"Confidence Score: {response_dict['confidence']}")
+            logger.error(f"Confidence Explanation: {response_dict['confidence_explanation']}")
             logger.error("Please check the query and try again.")
         logger.info("__________________________________________________________")
         return response_dict
