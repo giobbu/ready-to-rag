@@ -32,6 +32,7 @@ if __name__== "__main__":
                                                                 input_dir_val=params.input_dir_val, 
                                                                 prompt_tmpl=params.prompt_tmpl,
                                                                 chunk_size=params.sentence_splitter_chunk,
+                                                                sent_transf_params=params.sent_transf_params,
                                                                 save_model_path=params.model_output_path,
                                                                 save_train_path=params.out_dir_train,
                                                                 save_val_path=params.out_dir_val,

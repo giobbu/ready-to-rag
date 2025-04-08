@@ -76,22 +76,22 @@ class RAGgish:
                                 save_train_path, 
                                 save_val_path):
         """ Parse and save QA data for finetuning """
-        logger.debug("- Load QA data for training")
-        documents_train = self.load_data(input_dir_train, required_exts)
-        nodes_train = self.parse_documents(documents_train, chunk_size)
-        logger.debug("- Load QA data for validation")
-        documents_val = self.load_data(input_dir_val, required_exts)
-        nodes_val = self.parse_documents(documents_val, chunk_size)
-        logger.debug("- Parse QA pairs for training")
+        logger.debug("Setting Prompt template")
         prompts={}
         prompts["EN"] = prompt_tmpl
+        logger.debufg(f"-- QA data with chunk size: {chunk_size}")
+        logger.debug(f"-- training")
+        documents_train = self.load_data(input_dir_train, required_exts)
+        nodes_train = self.parse_documents(documents_train, chunk_size)
         generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
                                         nodes=nodes_train,
                                         qa_generate_prompt_tmpl = prompts["EN"],
                                         num_questions_per_chunk=1,
                                         output_path=save_train_path
                                                             )
-        logger.debug("- Parse QA pairs for validation")
+        logger.debug("-- validation")
+        documents_val = self.load_data(input_dir_val, required_exts)
+        nodes_val = self.parse_documents(documents_val, chunk_size)
         generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
                                         nodes=nodes_val,
                                         qa_generate_prompt_tmpl = prompts["EN"],
@@ -106,7 +106,8 @@ class RAGgish:
         val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
         return train_dataset, val_dataset
         
-    def get_sentence_transformer_finetune(self, train_dataset, model_output_path):
+    def get_sentence_transformer_finetune(self, train_dataset, model_output_path, bias=True, epochs=10):
+        """ Get the finetune engine """
         " Get the finetune engine "
         logger.debug('Loading base embedding model and setting up finetuning engine')
         base_embed_model = resolve_embed_model(f"local:{self.embed_name}")
@@ -114,8 +115,8 @@ class RAGgish:
             train_dataset,
             base_embed_model,
             model_output_path = model_output_path,
-            bias=True,
-            epochs=10,
+            bias=bias,
+            epochs=epochs,
             verbose=True,
         )
         return finetuned_engine
@@ -125,6 +126,7 @@ class RAGgish:
                             input_dir_val,
                             prompt_tmpl,
                             chunk_size,
+                            sent_transf_params,
                             save_train_path, 
                             save_val_path,
                             save_model_path,
@@ -144,9 +146,12 @@ class RAGgish:
             train_data_path=save_train_path,
             val_data_path=save_val_path
         )
+        logger.debug(f"--- Finetuning the embedding model with params {sent_transf_params}")
         finetune_engine = self.get_sentence_transformer_finetune(
             train_dataset=train_dataset,
-            model_output_path=save_model_path
+            model_output_path=save_model_path,
+            bias=sent_transf_params["bias"],
+            epochs=sent_transf_params["epochs"]
         )
         finetune_engine.finetune()
         embed_model_finetuned = finetune_engine.get_finetuned_model()

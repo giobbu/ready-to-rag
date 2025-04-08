@@ -12,6 +12,8 @@ class EmbeddingSettings(BaseModel):
     run_finetuning: bool = True
     use_finetuned_model: bool = True
     adapter: str = "linear"
+    sent_transf_params : dict = {"bias" : True,
+                                "epochs" : 10}
     model_output_path: str = "save/embedding/baai/linear_adapter_model_output"
 
 class LLMSettings(BaseModel):

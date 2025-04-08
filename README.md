@@ -55,6 +55,8 @@ from logs: *`Calling function: metadata_vector_tool with args: {"query": "Introd
 
 ## Evaluation
 
+### Chunksize
+
 ### Embedding
 
 #### `BAAI/bge-small-en-v1.5` WITHOUT finetuning

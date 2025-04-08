@@ -1,0 +1,37 @@
+2025-04-08 18:11:47 | INFO |  
+2025-04-08 18:11:47 | INFO | ----------------- RAGgish ---------------------------
+2025-04-08 18:11:47 | INFO |  
+2025-04-08 18:11:47 | INFO | Loading settings
+2025-04-08 18:11:47 | INFO |  
+2025-04-08 18:11:47 | INFO | ----------------- Finetuning ---------------------------
+2025-04-08 18:11:47 | INFO |  
+2025-04-08 18:11:47 | DEBUG | File save/qa/train_dataset_gpt.json exists
+2025-04-08 18:11:47 | DEBUG | Loading QA data for finetuning
+2025-04-08 18:11:47 | DEBUG | --- Finetuning the embedding model with params {'bias': True, 'epochs': 10}
+2025-04-08 18:11:47 | DEBUG | Loading base embedding model and setting up finetuning engine
+2025-04-08 18:12:35 | INFO | Finetuning completed. Please check the output files.
+2025-04-08 18:12:35 | INFO |  
+2025-04-08 18:12:35 | INFO | ----------------- Operation ---------------------------
+2025-04-08 18:12:35 | INFO |  
+2025-04-08 18:12:35 | INFO | Loading data
+2025-04-08 18:12:35 | DEBUG | Load from PATH: data/
+2025-04-08 18:12:35 | DEBUG | Loaded 37 documents
+2025-04-08 18:12:35 | INFO | Parsing documents
+2025-04-08 18:12:35 | INFO | Creating indexes
+2025-04-08 18:12:35 | INFO | Using finetuned model
+2025-04-08 18:12:35 | DEBUG | * Creating VectorStore Index
+2025-04-08 18:12:37 | DEBUG | * Creating Summary Index
+2025-04-08 18:12:38 | DEBUG | - Created Vector QueryEngine Tool
+2025-04-08 18:12:38 | DEBUG | - Created Metadata QueryEngine Tool
+2025-04-08 18:12:38 | DEBUG | - Created Summary QueryEngine Tool
+2025-04-08 18:12:38 | DEBUG | Loaded LLM model: gpt-3.5-turbo
+2025-04-08 18:12:41 | INFO | __________________________________________________________
+2025-04-08 18:12:41 | INFO | 
+
+2025-04-08 18:12:41 | INFO | Query: Summarize the Introduction section from page 2 to 4.
+2025-04-08 18:12:41 | INFO | Structured Output: {"response":"Deep learning algorithms, including autoencoders, have been increasingly utilized for anomaly detection. While effective at identifying anomalies, the challenge lies in explaining the detected anomalies. Providing explanations per instance is crucial for building trust in anomaly detection systems, especially in domains like autonomous cars and medicine. The proposed method in the study uses SHAP to explain anomalies correctly, demonstrating robustness and effectiveness in reducing anomaly scores compared to other methods.","confidence":0.9,"confidence_explanation":"The response directly addresses the key points regarding the use of deep learning algorithms, the importance of explaining anomalies per instance, and the effectiveness of the proposed method using SHAP. The information is accurately extracted from the provided context.","page_numbers":[2,4]}
+2025-04-08 18:12:41 | INFO | __________________________________________________________
+2025-04-08 18:12:41 | INFO | Response: Deep learning algorithms, including autoencoders, have been increasingly utilized for anomaly detection. While effective at identifying anomalies, the challenge lies in explaining the detected anomalies. Providing explanations per instance is crucial for building trust in anomaly detection systems, especially in domains like autonomous cars and medicine. The proposed method in the study uses SHAP to explain anomalies correctly, demonstrating robustness and effectiveness in reducing anomaly scores compared to other methods.
+2025-04-08 18:12:41 | WARNING | Confidence Score: 0.9
+2025-04-08 18:12:41 | WARNING | Confidence Explanation: The response directly addresses the key points regarding the use of deep learning algorithms, the importance of explaining anomalies per instance, and the effectiveness of the proposed method using SHAP. The information is accurately extracted from the provided context.
+2025-04-08 18:12:41 | INFO | __________________________________________________________
