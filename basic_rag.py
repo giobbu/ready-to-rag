@@ -19,7 +19,7 @@ load_dotenv()
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 from config.logging_setting import setup_logger
-logger = setup_logger()
+logger = setup_logger(path_to_save="logs/operation")
 
 class RAGgish:
     " RAG model for question answering "

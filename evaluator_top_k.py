@@ -13,7 +13,7 @@ from config.setting import EvalSettings
 params = EvalSettings()
 
 from config.logging_setting import setup_logger
-logger = setup_logger()
+logger = setup_logger(f"logs/evaluate/{params.embed_name}/{'finetune' if params.finetune else 'baseline'}")
 
 nest_asyncio.apply()
 async def evaluate(dataset_path: str, embed_model: str = None, top_k: int = 1, finetune:bool = False, path_finetuned: str = None) -> list:
