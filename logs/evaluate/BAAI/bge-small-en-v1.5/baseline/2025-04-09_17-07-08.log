@@ -1,0 +1,7 @@
+2025-04-09 17:07:08 | INFO | Evaluating with top_k=2 on train dataset...
+2025-04-09 17:07:08 | INFO | Evaluating and saving results to cache: evaluate/cache/1bf0720acb85a42f78381fc9b0142dd7.pkl
+2025-04-09 17:07:18 | INFO | Evaluating with top_k=2 on val dataset...
+2025-04-09 17:07:18 | INFO | Evaluating and saving results to cache: evaluate/cache/f55adf96aae9ca4441a3cfff34fec50d.pkl
+2025-04-09 17:07:22 | INFO |                     embed   data         top  hit_rate       mrr  precision    recall        ap      ndcg
+0  BAAI/bge-small-en-v1.5  train  top-2 eval  0.706667  0.653333   0.353333  0.706667  0.653333  0.667299
+1  BAAI/bge-small-en-v1.5    val  top-2 eval  0.900000  0.850000   0.450000  0.900000  0.850000  0.863093

@@ -1,20 +1,21 @@
 
+from loguru import logger
+import pandas as pd
+import os
+import nest_asyncio
+import asyncio
 from llama_index.core.schema import TextNode
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.evaluation import EmbeddingQAFinetuneDataset, RetrieverEvaluator
 from llama_index.embeddings.adapter import AdapterEmbeddingModel
 from llama_index.core.embeddings.utils import resolve_embed_model
-from loguru import logger
-import pandas as pd
-
+from evaluate.utils import get_cache_path, load_cached_results, save_results_to_cache
 from config.setting import EvalSettings
-params = EvalSettings()
-
 from config.logging_setting import setup_logger
+
+params = EvalSettings()
 logger = setup_logger(f"logs/evaluate/{params.embed_name}/{'finetune' if params.finetune else 'baseline'}")
 
-import nest_asyncio
-import asyncio
 nest_asyncio.apply()
 
 async def evaluate(dataset_path: str, 
@@ -64,9 +65,11 @@ def run_evaluator_top_k(
                         finetune:bool = False, 
                         path_finetuned: str = None) -> pd.DataFrame:
     """Run evaluator for all dataset types."""
+
     all_results = []
     model_name = f"finetune_{name}" if finetune else name
     embed_model = f"local:{name}"
+
     for dataset_path in dataset_path_list:
         if "train" in dataset_path:
             dataset_type = "train"
@@ -75,17 +78,28 @@ def run_evaluator_top_k(
         else:
             raise ValueError(f"Invalid dataset path: {dataset_path}")
         logger.info(f"Evaluating with top_k={top_k} on {dataset_type} dataset...")
-        eval_results = asyncio.run(evaluate(dataset_path=dataset_path,
-                                            embed_model=embed_model, 
-                                            top_k=top_k, 
-                                            finetune=finetune, 
-                                            path_finetuned=path_finetuned))
+
+        cache_path = get_cache_path(name, dataset_type, top_k, finetune)
+
+        if os.path.exists(cache_path):
+            logger.info(f"Loading cached results from: {cache_path}")
+            eval_results = load_cached_results(cache_path)
+        else:
+            logger.info(f"Evaluating and saving results to cache: {cache_path}")
+            eval_results = asyncio.run(evaluate(dataset_path=dataset_path,
+                                                embed_model=embed_model, 
+                                                top_k=top_k, 
+                                                finetune=finetune, 
+                                                path_finetuned=path_finetuned))
+            save_results_to_cache(cache_path, eval_results)
+        
+        # Display results
         result_df = display_results(
-            name=model_name,
-            data=dataset_type,
-            top=f"top-{top_k} eval",
-            eval_results=eval_results
-        )
+                                    name=model_name,
+                                    data=dataset_type,
+                                    top=f"top-{top_k} eval",
+                                    eval_results=eval_results
+                                )
         all_results.append(result_df)
     df_results = pd.concat(all_results, axis=0, ignore_index=True)
     logger.info(df_results)
