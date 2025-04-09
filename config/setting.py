@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-
 class EmbeddingSettings(BaseModel):
     embed_name: str = "BAAI/bge-small-en-v1.5"
     input_dir_train: str = "data/finetune-embed/train"
@@ -39,7 +38,8 @@ class Settings(EmbeddingSettings, LLMSettings, PromptTemplate):
 
 class EvalSettings(BaseModel):
     embed_name: str = "BAAI/bge-small-en-v1.5"
-    finetune: bool = True
+    finetune: bool = False
     path_finetuned: str = "save/embedding/baai/linear_adapter_model_output"
     top_k: int = 2
-    dataset_type_list: List[str] = ['train', 'val']
+    dataset_path_list: List[str] = ["save/qa/train_dataset_gpt.json", 
+                                    "save/qa/val_dataset_gpt.json"]

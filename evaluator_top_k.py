@@ -5,8 +5,6 @@ from llama_index.core.evaluation import EmbeddingQAFinetuneDataset, RetrieverEva
 from llama_index.embeddings.adapter import AdapterEmbeddingModel
 from llama_index.core.embeddings.utils import resolve_embed_model
 from loguru import logger
-import nest_asyncio
-import asyncio
 import pandas as pd
 
 from config.setting import EvalSettings
@@ -15,26 +13,32 @@ params = EvalSettings()
 from config.logging_setting import setup_logger
 logger = setup_logger(f"logs/evaluate/{params.embed_name}/{'finetune' if params.finetune else 'baseline'}")
 
+import nest_asyncio
+import asyncio
 nest_asyncio.apply()
-async def evaluate(dataset_path: str, embed_model: str = None, top_k: int = 1, finetune:bool = False, path_finetuned: str = None) -> list:
+
+async def evaluate(dataset_path: str, 
+                embed_model: str = None, 
+                top_k: int = 1, 
+                finetune:bool = False, 
+                path_finetuned: str = None) -> list:
     """Evaluate the retriever using the given dataset and embedding model."""
+
     dataset = EmbeddingQAFinetuneDataset.from_json(dataset_path)
     corpus = dataset.corpus
     embed_model = embed_model or Settings.embed_model
     nodes = [TextNode(id_=id_, text=text) for id_, text in corpus.items()]
+
     if finetune:
         base_embed_model = resolve_embed_model(embed_model)
-        embed_model_finetuned = AdapterEmbeddingModel(
+        embed_model = AdapterEmbeddingModel(
                                         base_embed_model,
                                         adapter_path=path_finetuned,
                                     )
-        index = VectorStoreIndex(nodes, 
-                                embed_model=embed_model_finetuned, 
-                                show_progress=True)
-    else:
-        index = VectorStoreIndex(nodes, 
-                                embed_model=embed_model, 
-                                show_progress=True)
+    index = VectorStoreIndex(nodes, 
+                            embed_model=embed_model, 
+                            show_progress=True)
+
     retriever = index.as_retriever(similarity_top_k=top_k)
     metrics = ["hit_rate", "mrr", "precision", "recall", "ap", "ndcg"]
     retriever_evaluator = RetrieverEvaluator.from_metric_names(metrics, retriever=retriever)
@@ -53,40 +57,43 @@ def display_results(name:str, data:str, top: str, eval_results: list) -> pd.Data
     metric_df = pd.DataFrame(columns)
     return metric_df
 
-def run_evaluator_top_k(name:str,
-                dataset_type_list:list,
-                top_k:int, 
-                finetune:bool = False, 
-                path_finetuned: str = None) -> pd.DataFrame:
-    df_results = pd.DataFrame([])
-    for dataset_type in dataset_type_list:
-        dataset_path = f"save/gpt/{dataset_type}_dataset_gpt.json"
-        bge = f"local:{name}"
-        logger.info(f"Evaluating with top_k={top_k} on {dataset_type} dataset...")
-        eval_results = asyncio.run(evaluate(dataset_path, bge, top_k=top_k, finetune = finetune, path_finetuned = path_finetuned))
-        if df_results.empty:
-            df_results = display_results(name=f"finetune_{name}" if finetune else name,
-                                        data = dataset_type,
-                                        top=f"top-{top_k} eval", 
-                                        eval_results=eval_results)
+def run_evaluator_top_k(
+                        name:str,
+                        dataset_path_list:list,
+                        top_k:int, 
+                        finetune:bool = False, 
+                        path_finetuned: str = None) -> pd.DataFrame:
+    """Run evaluator for all dataset types."""
+    all_results = []
+    model_name = f"finetune_{name}" if finetune else name
+    embed_model = f"local:{name}"
+    for dataset_path in dataset_path_list:
+        if "train" in dataset_path:
+            dataset_type = "train"
+        elif "val" in dataset_path:
+            dataset_type = "val"
         else:
-            df_results = pd.concat([df_results, 
-                                    display_results(name=f"finetune_{name}" if finetune else name,
-                                                    data = dataset_type,
-                                                    top=f"top-{top_k} eval", 
-                                                    eval_results=eval_results)], 
-                                                    axis=0)
+            raise ValueError(f"Invalid dataset path: {dataset_path}")
+        logger.info(f"Evaluating with top_k={top_k} on {dataset_type} dataset...")
+        eval_results = asyncio.run(evaluate(dataset_path=dataset_path,
+                                            embed_model=embed_model, 
+                                            top_k=top_k, 
+                                            finetune=finetune, 
+                                            path_finetuned=path_finetuned))
+        result_df = display_results(
+            name=model_name,
+            data=dataset_type,
+            top=f"top-{top_k} eval",
+            eval_results=eval_results
+        )
+        all_results.append(result_df)
+    df_results = pd.concat(all_results, axis=0, ignore_index=True)
     logger.info(df_results)
     return df_results
 
-if __name__ == "__main__":
-    df_results = run_evaluator_top_k(name = params.embed_name, 
-                                dataset_type_list= params.dataset_type_list, 
-                                top_k= params.top_k, 
-                                finetune=params.finetune, 
-                                path_finetuned=params.path_finetuned)
 
-    # plot stacked bar chart for train and val and for each metric in one plot
+def plot_results(df_results: pd.DataFrame, finetune:bool = False) -> None:
+    """Plot results from evaluate."""
     import matplotlib.pyplot as plt
     import seaborn as sns
     df_melt = df_results.melt(id_vars=["embed", "data", "top"],
@@ -97,7 +104,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(10, 6))
     sns.set_theme(style="whitegrid")
     sns.barplot(x="metric", y="value", hue="data", data=df_melt)
-    if params.finetune:
+    if finetune:
         plt.title(f"Evaluation Results for Finetuned {params.embed_name} with top-k {params.top_k}")
     else:
         plt.title(f"Evaluation Results for {params.embed_name} with top-k {params.top_k}")
@@ -107,9 +114,18 @@ if __name__ == "__main__":
     plt.xticks(rotation=45)
     plt.tight_layout()
     # save
-    if params.finetune:
-        plt.savefig(f"imgs/finetuned_eval_results.png")
-    else:
-        plt.savefig(f"imgs/baseline_eval_results.png")
+    output_file = f"imgs/{'finetuned' if finetune else 'baseline'}_eval_results.png"
+    plt.savefig(output_file)
     plt.show()
+
+
+if __name__ == "__main__":
+
+    df_results = run_evaluator_top_k(name = params.embed_name, 
+                                    dataset_path_list= params.dataset_path_list, 
+                                    top_k= params.top_k, 
+                                    finetune=params.finetune, 
+                                    path_finetuned=params.path_finetuned)
+    
+    plot_results(df_results, finetune=params.finetune)
     
