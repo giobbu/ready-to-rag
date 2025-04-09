@@ -41,7 +41,7 @@ async def evaluate(dataset_path: str,
                             show_progress=True)
 
     retriever = index.as_retriever(similarity_top_k=top_k)
-    metrics = ["hit_rate", "mrr", "precision", "recall", "ap", "ndcg"]
+    metrics = ["hit_rate", "mrr", "ap", "ndcg"]
     retriever_evaluator = RetrieverEvaluator.from_metric_names(metrics, retriever=retriever)
     eval_results = await retriever_evaluator.aevaluate_dataset(dataset)
     return eval_results
@@ -50,7 +50,7 @@ def display_results(name:str, data:str, top: str, eval_results: list) -> pd.Data
     """Display results from evaluate."""
     metric_dicts = [eval_result.metric_vals_dict for eval_result in eval_results]
     full_df = pd.DataFrame(metric_dicts)
-    metrics = ["hit_rate", "mrr", "precision", "recall", "ap", "ndcg"]
+    metrics = ["hit_rate", "mrr", "ap", "ndcg"]
     columns = {"embed": [name],
                 "data": [data],
                 "top": [top], 
@@ -111,7 +111,7 @@ def plot_results(df_results: pd.DataFrame, finetune:bool = False) -> None:
     import matplotlib.pyplot as plt
     import seaborn as sns
     df_melt = df_results.melt(id_vars=["embed", "data", "top"],
-                            value_vars=["hit_rate", "mrr", "precision", "recall", "ap", "ndcg"],
+                            value_vars=["hit_rate", "mrr", "ap", "ndcg"],
                             var_name="metric",
                             value_name="value")
     df_melt = df_melt.sort_values(by=["data", "top"])

@@ -57,7 +57,17 @@ from logs: *`Calling function: metadata_vector_tool with args: {"query": "Introd
 
 ### Chunksize
 
-### Embedding
+### Embedding 
+
+run `python evaluator_embedding.py`
+
+Evaluates model's performance by checking if the correct label is among the `top-k` predicted labels:
+* `hit_rate`: 1.0 if there is at least one relevant document among all the top k retrieved documents;
+* `mrr`: Mean of the Reciprocal Rank, that is the rank of the highest ranked relevant item, if any in the top k, 0 otherwise;
+* `ap`: Average Precision ([AP](https://www.wikiwand.com/en/articles/Evaluation_measures_(information_retrieval))) summarizes a precision-recall (PR) curve into a single value representing the average of all precisions;
+* `ndcg`: compute the Normalized Discounted Cumulative Gain ([NDCG](https://www.wikiwand.com/en/articles/Discounted_cumulative_gain)).
+
+
 
 #### `BAAI/bge-small-en-v1.5` WITHOUT finetuning
 <img src="imgs/baseline_eval_results.png" style="vertical-align: middle;">

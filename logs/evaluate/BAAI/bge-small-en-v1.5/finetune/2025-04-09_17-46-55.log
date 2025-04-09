@@ -1,0 +1,7 @@
+2025-04-09 17:46:55 | INFO | Evaluating with top_k=2 on train dataset...
+2025-04-09 17:46:55 | INFO | Evaluating and saving results to cache: evaluate/cache/4d56be3b16c29cea337d91f6729a4a0f.pkl
+2025-04-09 17:47:06 | INFO | Evaluating with top_k=2 on val dataset...
+2025-04-09 17:47:06 | INFO | Evaluating and saving results to cache: evaluate/cache/428ec3a65467543839ce4b36051a358a.pkl
+2025-04-09 17:47:10 | INFO |                              embed   data         top  hit_rate   mrr    ap      ndcg
+0  finetune_BAAI/bge-small-en-v1.5  train  top-2 eval  0.746667  0.70  0.70  0.712220
+1  finetune_BAAI/bge-small-en-v1.5    val  top-2 eval  0.900000  0.85  0.85  0.863093
