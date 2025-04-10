@@ -6,7 +6,7 @@ import argparse
 from utils import exist_QA_files
 params = Settings()
 
-logger = setup_logger()
+logger = setup_logger(path_to_save="logs/operation")
 
 if __name__== "__main__":
     parser = argparse.ArgumentParser(description="Raggish: A RAG model for question answering")
