@@ -81,7 +81,7 @@ This evaluation focuses on how the text-chunk size, `chunk_size`, influences the
 
 run `python evaluator_embedding.py`
 
-Evaluating embedding model's (finetuned and not) performance on question-answering (QA) training and validation datasets.
+Evaluating embedding model's (finetuned and not) performance on question-answering (QA) training and validation datasets with `RetrieverEvaluator`.
 In particular, the evaluation is conducted for each (query, text-chunks) pair by verifying whether the correct text-chunk appears within the `top-k` retrieved text-chunks.
 
 * **Mean Hit Rate** (`hit_rate`): 1.0 if there is at least one relevant text-chunk among all the top k retrieved text-chunks;
