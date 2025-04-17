@@ -32,7 +32,13 @@ class PromptTemplate(BaseModel):
         The questions should be diverse in nature across the document. Restrict the questions to the context information provided."
         """)
 
-class Settings(EmbeddingSettings, LLMSettings, PromptTemplate):
+class StoreIndex(BaseModel):
+    vec_store_idx_dir: str = "storage/vector_store_index"
+    vec_store_idx_name: str = "vector_store_index"
+    summ_idx_dir: str = "storage/summary_index"
+    summ_idx_name: str = "summary_index"
+
+class Settings(EmbeddingSettings, LLMSettings, PromptTemplate, StoreIndex):
     sentence_splitter_chunk: int = 1000
     list_tools: List[str] = ["Base", "Meta", "Summary"]  # Could be ['Base', 'Meta', 'Summary']
 
