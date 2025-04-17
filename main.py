@@ -4,8 +4,8 @@ from loguru import logger
 from config.logging_setting import setup_logger
 import argparse
 from utils import exist_QA_files
-params = Settings()
 
+params = Settings()
 logger = setup_logger(path_to_save="logs/operation")
 
 if __name__== "__main__":
@@ -18,16 +18,13 @@ if __name__== "__main__":
     logger.info(' ')
     logger.info('----------------- RAGgish ---------------------------')
     logger.info(' ')
-    logger.info('Loading settings')
+    logger.info('------------ Loading RAG Configurations')
     basic_rag = RAGgish(embed_name=params.embed_name, llm_name=params.llm_name)
     if params.run_finetuning:
         logger.info(' ')
         logger.info('----------------- Finetuning ---------------------------')
         logger.info(' ')
-        if not exist_QA_files(params):
-            parse_file = True
-        else:
-            parse_file = False
+        parse_file = False if exist_QA_files(params) else True
         embed_model_finetuned = basic_rag.finetune_embeddings(input_dir_train=params.input_dir_train,
                                                                 input_dir_val=params.input_dir_val, 
                                                                 prompt_tmpl=params.prompt_tmpl,
@@ -48,20 +45,30 @@ if __name__== "__main__":
             raise ValueError("Please check the model_output_path in the config file")
     logger.info(' ')
     logger.info('----------------- Operation ---------------------------')
-    logger.info(' ')
-    logger.info('Loading data')
+    logger.info('------------ Loading data')
     documents = basic_rag.load_data(input_dir=params.input_dir_test, required_exts=[".pdf"])
-    logger.info('Parsing documents')
+    logger.info('------------ Parsing documents')
     nodes = basic_rag.parse_documents(documents, chunk_size=params.sentence_splitter_chunk)
-    logger.info('Creating indexes')
+    logger.info('------------ Creating OR Loading Indexes')
     if params.use_finetuned_model:
         logger.info('Using finetuned model')
-        vector_index = basic_rag.create_vector_index(nodes, embed_model_finetuned)
-        summary_index = basic_rag.create_summary_index(nodes, embed_model_finetuned)
+        vector_index = basic_rag.create_or_load_vector_idx(nodes=nodes,
+                                                            vec_store_path=params.vec_store_idx_dir,
+                                                            vec_store_idx=params.vec_store_idx_name,
+                                                            embed_model=embed_model_finetuned)                                          
+        summary_index = basic_rag.create_or_load_summary_idx(nodes=nodes,
+                                                            summary_path=params.summ_idx_dir,
+                                                            summary_idx=params.summ_idx_name,
+                                                            embed_model=embed_model_finetuned)
     else:
         logger.info('Using non-finetuned model')
-        vector_index = basic_rag.create_vector_index(nodes)
-        summary_index = basic_rag.create_summary_index(nodes)
+        vector_index = basic_rag.create_or_load_vector_idx(nodes=nodes,
+                                                            vec_store_path=params.vec_store_idx_dir,
+                                                            vec_store_idx=params.vec_store_idx_name)
+        summary_index = basic_rag.create_or_load_summary_idx(nodes=nodes,
+                                                            summary_path=params.summ_idx_dir,
+                                                            summary_idx=params.summ_idx_name)
+    logger.info('------------ Creating Tools')
     list_tools = []
     for tools in params.list_tools:
         if tools == 'Base':
@@ -72,6 +79,8 @@ if __name__== "__main__":
             list_tools.append(basic_rag.create_summary_query_tool(summary_index))
         else:
             raise ValueError(f"Tool {tools} not recognized. Please check the config file.")
+    
+    logger.info('------------ Synthetizing response')
     response = basic_rag.answer(query, list_tools)
     
     

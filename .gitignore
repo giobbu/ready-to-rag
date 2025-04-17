@@ -1,4 +1,6 @@
+storage*
 evaluate/cache/*
+logs/operation/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

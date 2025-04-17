@@ -1,9 +1,12 @@
 from loguru import logger
-from llama_index.core import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.finetuning import generate_qa_embedding_pairs
+
+from llama_index.core import StorageContext, load_index_from_storage
+from llama_index.core import SummaryIndex
+from llama_index.core.tools import FunctionTool
 
 from llama_index.core.evaluation import EmbeddingQAFinetuneDataset
 from llama_index.finetuning import EmbeddingAdapterFinetuneEngine
@@ -12,10 +15,12 @@ from llama_index.embeddings.adapter import AdapterEmbeddingModel
 from llama_index.llms.openai import OpenAI
 
 from models.output import BasicOutput, MetaVectorOutput
+import os
+import json
 
 from dotenv import load_dotenv
-import os
 load_dotenv()
+
 os.environ["OPENAI_API_KEY"] = os.getenv("OPENAI_API_KEY")
 
 from config.logging_setting import setup_logger
@@ -166,33 +171,45 @@ class RAGgish:
                                 )
             return embed_model_finetuned
 
-    def create_vector_index(self, nodes, embed_model=None):
+    def create_or_load_vector_idx(self, nodes, vec_store_path, vec_store_idx, embed_model=None):
         " Create a vector store index "
+        if os.path.exists(vec_store_path):
+            logger.debug("* Loading VectorStore Index")
+            storage_context = StorageContext.from_defaults(persist_dir=vec_store_path)
+            index = load_index_from_storage(storage_context, index_id=vec_store_idx)
+            return index
         logger.debug("* Creating VectorStore Index")
         index = VectorStoreIndex(
-        nodes=nodes, 
-        embed_model=self._set_embed_model() if embed_model is None else embed_model,
-        insert_batch_size=1000,
-        show_progress=True
-        )
+                                nodes=nodes, 
+                                embed_model=self._set_embed_model() if embed_model is None else embed_model,
+                                insert_batch_size=1000,
+                                show_progress=True
+                                )
+        index.set_index_id(vec_store_idx)
+        index.storage_context.persist(persist_dir=vec_store_path)   
         return index
     
-    def create_summary_index(self, nodes, embed_model=None):
+    def create_or_load_summary_idx(self, nodes, summary_path, summary_idx, embed_model=None):
         " Create a summary index "
-        from llama_index.core import SummaryIndex
+        if os.path.exists(summary_path):
+            logger.debug("* Loading Summary Index")
+            storage_context = StorageContext.from_defaults(persist_dir=summary_path)
+            index = load_index_from_storage(storage_context, index_id="summary_index")
+            return index
         logger.debug("* Creating Summary Index")
         index = SummaryIndex(nodes=nodes,
                             embed_model=self._set_embed_model() if embed_model is None else embed_model,
                             show_progress=True)
+        index.set_index_id(summary_idx)
+        index.storage_context.persist(persist_dir=summary_path)
         return index
 
     def create_base_query_tool(self, index):
         " Create a base query tool "
-        from llama_index.core.tools import FunctionTool
 
         def vector_query(query: str) -> str:
             " Query the index "
-            llm = OpenAI(temperature=0.0, model=self.llm_name)
+            llm = self._set_llm_model()
             structured_llm = llm.as_structured_llm(output_cls=BasicOutput)
             query_engine = index.as_query_engine(llm=structured_llm)
             response = query_engine.query(query)
@@ -206,6 +223,9 @@ class RAGgish:
                                         "basic answers to your queries. "
                                     ))
         logger.debug("- Created Vector QueryEngine Tool")
+        schema = vector_query_tool.metadata.get_parameters_dict()
+        print("Vector Tool Schema:")
+        print(schema)
         return vector_query_tool
 
     def create_metadata_query_tool(self, index):
@@ -217,7 +237,7 @@ class RAGgish:
 
         def metadata_vector_query(query: str, page_numbers: List[str]) -> str:
             " Query the index with metadata filters "
-            llm = OpenAI(temperature=0.0, model=self.llm_name)
+            llm = self._set_llm_model()
             structured_llm = llm.as_structured_llm(output_cls=MetaVectorOutput)
             meta_data = [{"key": "page_label", "value": p} for p in page_numbers]
             query_engine = index.as_query_engine(
@@ -237,12 +257,15 @@ class RAGgish:
                                         "based on page numbers. "
                                     ))
         logger.debug("- Created Metadata QueryEngine Tool")
+        schema = metadata_vector_query_tool.metadata.get_parameters_dict()
+        print("Metadata Tool Schema:")
+        print(schema)
         return metadata_vector_query_tool
 
     def create_summary_query_tool(self, summary_index):
         " Create a summary query engine "
         from llama_index.core.tools import QueryEngineTool
-        llm = OpenAI(temperature=0.0, model=self.llm_name)
+        llm = self._set_llm_model()
         structured_llm = llm.as_structured_llm(output_cls=BasicOutput)
         summary_query_engine = summary_index.as_query_engine(
             llm=structured_llm,
@@ -257,25 +280,37 @@ class RAGgish:
             ),
         )
         logger.debug("- Created Summary QueryEngine Tool")
+        schema = summary_tool.metadata.get_parameters_dict()
+        print("Summary Tool Schema:")
+        print(schema)
         return summary_tool
 
     def answer(self, query, list_tools=None):
         """ Answer the query by employing differnt tools """
-        import json
         llm = self._set_llm_model()
-        if len(list_tools) == 0:
+        if list_tools is None:
+            logger.error("No tools provided. Please check the config file.")
             raise ValueError("No tools provided. Please check the config file.")
         elif len(list_tools) > 3:
+            logger.error("Too many tools provided. Please check the config file.")
             raise ValueError("Too many tools provided. Please check the config file.")
+        
+        print("--------------------------------------")
+        print(f"Query: {query}")
+        print("--------------------------------------")
         response = llm.predict_and_call(list_tools,  
                                         query,
                                         verbose=True)
+        response_dict = json.loads(response.response)
+        self.display_response(query, response, response_dict)
+        return response_dict
+    
+    def display_response(self, query, response, response_dict):
+        """ Display the response """
         logger.info("__________________________________________________________")
-        logger.info("\n")
         logger.info(f'Query: {query}')
         logger.info(f"Structured Output: {response}")
         logger.info("__________________________________________________________")
-        response_dict = json.loads(response.response)
         logger.info(f'Response: {response_dict["response"]}')
         if response_dict['confidence'] > 0.9:
             logger.success(f"Confidence Score: {response_dict['confidence']}")
@@ -287,7 +322,8 @@ class RAGgish:
             logger.error(f"Confidence Explanation: {response_dict['confidence_explanation']}")
             logger.error("Please check the query and try again.")
         logger.info("__________________________________________________________")
-        return response_dict
+
+
         
 
 
