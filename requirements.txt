@@ -4,3 +4,4 @@ llama-index-finetuning==0.2.0
 loguru==0.7.2
 pip-chill==1.0.3
 seaborn==0.13.2
+ipykernel==6.29.5
