@@ -28,7 +28,8 @@ logger = setup_logger(path_to_save="logs/operation")
 
 class RAGgish:
     " RAG model for question answering "
-    def __init__(self, embed_name, llm_name):
+    def __init__(self, embed_name: str, llm_name: str):
+        """ Initialize the RAG model """
         self.embed_name = embed_name
         self.llm_name = llm_name
 
@@ -49,7 +50,7 @@ class RAGgish:
         logger.debug(f"Loaded LLM model: {self.llm_name}")
         return llm
 
-    def _set_QA_llm(self, llm_name):
+    def _set_QA_llm(self, llm_name: str):
         """ Set LLM model for QA """
         try:
             llm = OpenAI(temperature=0.0, model=llm_name)
@@ -58,7 +59,7 @@ class RAGgish:
         logger.debug(f"Loaded LLM model for QA: {llm_name}")
         return llm
 
-    def load_data(self, input_dir, required_exts):
+    def load_data(self, input_dir: str, required_exts: list):
         " Load data from input_dir "
         logger.debug(f"Load from PATH: {input_dir}")
         documents = SimpleDirectoryReader(input_dir=input_dir, 
@@ -66,20 +67,20 @@ class RAGgish:
         logger.debug(f"Loaded {len(documents)} documents")
         return documents
     
-    def parse_documents(self, documents, chunk_size):
+    def parse_documents(self, documents: list, chunk_size: int):
         " Parse documents into nodes"
         parser = SentenceSplitter(chunk_size=chunk_size)
         nodes = parser.get_nodes_from_documents(documents, show_progress=True)
         return nodes
     
     def parse_files_to_QA_data(self, 
-                                input_dir_train, 
-                                input_dir_val, 
-                                required_exts, 
-                                prompt_tmpl,
-                                chunk_size,
-                                save_train_path, 
-                                save_val_path):
+                                input_dir_train: str,
+                                input_dir_val: str,
+                                required_exts: list, 
+                                prompt_tmpl: str,
+                                chunk_size: int,
+                                save_train_path: str, 
+                                save_val_path: str):
         """ Parse and save QA data for finetuning """
         logger.debug("Setting Prompt template")
         prompts={}
@@ -104,14 +105,18 @@ class RAGgish:
                                         output_path=save_val_path
                                         )
     
-    def load_QA_data(self, train_data_path, val_data_path):
+    def load_QA_data(self, train_data_path: str, val_data_path: str):
         " Load finetune data "
         logger.debug("Loading QA data for finetuning")
         train_dataset = EmbeddingQAFinetuneDataset.from_json(train_data_path)
         val_dataset = EmbeddingQAFinetuneDataset.from_json(val_data_path)
         return train_dataset, val_dataset
         
-    def get_sentence_transformer_finetune(self, train_dataset, model_output_path, bias=True, epochs=10):
+    def get_sentence_transformer_finetune(self, 
+                                          train_dataset: EmbeddingQAFinetuneDataset, 
+                                          model_output_path: str, 
+                                          bias: bool = True, 
+                                          epochs: int = 10):
         """ Get the finetune engine """
         " Get the finetune engine "
         logger.debug('Loading base embedding model and setting up finetuning engine')
@@ -127,15 +132,15 @@ class RAGgish:
         return finetuned_engine
     
     def finetune_embeddings(self, 
-                            input_dir_train, 
-                            input_dir_val,
-                            prompt_tmpl,
-                            chunk_size,
-                            sent_transf_params,
-                            save_train_path, 
-                            save_val_path,
-                            save_model_path,
-                            parse_files=False):
+                            input_dir_train: str,
+                            input_dir_val: str,
+                            prompt_tmpl: str,
+                            chunk_size: int,
+                            sent_transf_params: dict,
+                            save_train_path: str, 
+                            save_val_path: str,
+                            save_model_path: str,
+                            parse_files: bool = True):
         """ Finetune the embeddings """
         if parse_files:
             self.parse_files_to_QA_data(
@@ -147,10 +152,9 @@ class RAGgish:
                 save_train_path=save_train_path,
                 save_val_path=save_val_path
             )
-        train_dataset, _ = self.load_QA_data(
-            train_data_path=save_train_path,
-            val_data_path=save_val_path
-        )
+        train_dataset, _ = self.load_QA_data(train_data_path=save_train_path,
+                                            val_data_path=save_val_path
+                                            )
         logger.debug(f"--- Finetuning the embedding model with params {sent_transf_params}")
         finetune_engine = self.get_sentence_transformer_finetune(
             train_dataset=train_dataset,
@@ -171,7 +175,11 @@ class RAGgish:
                                 )
             return embed_model_finetuned
 
-    def create_or_load_vector_idx(self, nodes, vec_store_path, vec_store_idx, embed_model=None):
+    def create_or_load_vector_idx(self, 
+                                  nodes: list, 
+                                  vec_store_path: str,
+                                  vec_store_idx: str,
+                                  embed_model: str = None):
         " Create a vector store index "
         if os.path.exists(vec_store_path):
             logger.debug("* Loading VectorStore Index")
@@ -189,7 +197,11 @@ class RAGgish:
         index.storage_context.persist(persist_dir=vec_store_path)   
         return index
     
-    def create_or_load_summary_idx(self, nodes, summary_path, summary_idx, embed_model=None):
+    def create_or_load_summary_idx(self, 
+                                   nodes: list,
+                                   summary_path: str, 
+                                   summary_idx: str,
+                                   embed_model: str = None):
         " Create a summary index "
         if os.path.exists(summary_path):
             logger.debug("* Loading Summary Index")
@@ -204,7 +216,7 @@ class RAGgish:
         index.storage_context.persist(persist_dir=summary_path)
         return index
 
-    def create_base_query_tool(self, index):
+    def create_base_query_tool(self, index: VectorStoreIndex):
         " Create a base query tool "
 
         def vector_query(query: str) -> str:
@@ -228,7 +240,7 @@ class RAGgish:
         print(schema)
         return vector_query_tool
 
-    def create_metadata_query_tool(self, index):
+    def create_metadata_query_tool(self, index: VectorStoreIndex):
         " Create a metadata query engine "
         from llama_index.core.vector_stores import MetadataFilters
         from llama_index.core.vector_stores import FilterCondition
@@ -262,7 +274,7 @@ class RAGgish:
         print(schema)
         return metadata_vector_query_tool
 
-    def create_summary_query_tool(self, summary_index):
+    def create_summary_query_tool(self, summary_index: SummaryIndex):
         " Create a summary query engine "
         from llama_index.core.tools import QueryEngineTool
         llm = self._set_llm_model()
@@ -285,7 +297,7 @@ class RAGgish:
         print(schema)
         return summary_tool
 
-    def answer(self, query, list_tools=None):
+    def answer(self, query: str, list_tools: list):
         """ Answer the query by employing differnt tools """
         llm = self._set_llm_model()
         if list_tools is None:
@@ -305,7 +317,7 @@ class RAGgish:
         self.display_response(query, response, response_dict)
         return response_dict
     
-    def display_response(self, query, response, response_dict):
+    def display_response(self, query: str, response: str, response_dict: dict):
         """ Display the response """
         logger.info("__________________________________________________________")
         logger.info(f'Query: {query}')
