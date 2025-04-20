@@ -28,10 +28,11 @@ logger = setup_logger(path_to_save="logs/operation")
 
 class RAGgish:
     " RAG model for question answering "
-    def __init__(self, embed_name: str, llm_name: str):
+    def __init__(self, embed_name: str, llm_name: str, temperature: float = 0.0):
         """ Initialize the RAG model """
         self.embed_name = embed_name
         self.llm_name = llm_name
+        self.temperature = temperature
 
     def _set_embed_model(self):
         """ Set Embedding model """
@@ -44,19 +45,19 @@ class RAGgish:
     def _set_llm_model(self):
         """ Set LLM model """
         try: 
-            llm = OpenAI(temperature=0.0, model=self.llm_name)
+            llm = OpenAI(temperature=self.temperature, model=self.llm_name)
         except:
             raise ValueError(f"Error loading LLM model: {self.llm_name}")
         logger.debug(f"Loaded LLM model: {self.llm_name}")
         return llm
 
-    def _set_QA_llm(self, llm_name: str):
+    def _set_QA_llm(self):
         """ Set LLM model for QA """
         try:
-            llm = OpenAI(temperature=0.0, model=llm_name)
+            llm = OpenAI(temperature=self.temperature, model=self.llm_name)
         except:
-            raise ValueError(f"Error loading LLM model: {llm_name}")
-        logger.debug(f"Loaded LLM model for QA: {llm_name}")
+            raise ValueError(f"Error loading LLM model: {self.llm_name}")
+        logger.debug(f"Loaded LLM model for QA: {self.llm_name}")
         return llm
 
     def load_data(self, input_dir: str, required_exts: list):
@@ -89,7 +90,7 @@ class RAGgish:
         logger.debug(f"-- training")
         documents_train = self.load_data(input_dir_train, required_exts)
         nodes_train = self.parse_documents(documents_train, chunk_size)
-        generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
+        generate_qa_embedding_pairs(llm=self._set_QA_llm(),
                                         nodes=nodes_train,
                                         qa_generate_prompt_tmpl = prompts["EN"],
                                         num_questions_per_chunk=1,
@@ -98,7 +99,7 @@ class RAGgish:
         logger.debug("-- validation")
         documents_val = self.load_data(input_dir_val, required_exts)
         nodes_val = self.parse_documents(documents_val, chunk_size)
-        generate_qa_embedding_pairs(llm= self._set_QA_llm(self.llm_name),
+        generate_qa_embedding_pairs(llm=self._set_QA_llm(),
                                         nodes=nodes_val,
                                         qa_generate_prompt_tmpl = prompts["EN"],
                                         num_questions_per_chunk=1,
@@ -122,13 +123,13 @@ class RAGgish:
         logger.debug('Loading base embedding model and setting up finetuning engine')
         base_embed_model = resolve_embed_model(f"local:{self.embed_name}")
         finetuned_engine = EmbeddingAdapterFinetuneEngine(
-            train_dataset,
-            base_embed_model,
-            model_output_path = model_output_path,
-            bias=bias,
-            epochs=epochs,
-            verbose=True,
-        )
+                                                        train_dataset,
+                                                        base_embed_model,
+                                                        model_output_path = model_output_path,
+                                                        bias=bias,
+                                                        epochs=epochs,
+                                                        verbose=True,
+                                                    )
         return finetuned_engine
     
     def finetune_embeddings(self, 
@@ -144,14 +145,14 @@ class RAGgish:
         """ Finetune the embeddings """
         if parse_files:
             self.parse_files_to_QA_data(
-                input_dir_train=input_dir_train,
-                input_dir_val=input_dir_val,
-                required_exts=['.pdf'],
-                prompt_tmpl=prompt_tmpl,
-                chunk_size=chunk_size,
-                save_train_path=save_train_path,
-                save_val_path=save_val_path
-            )
+                                        input_dir_train=input_dir_train,
+                                        input_dir_val=input_dir_val,
+                                        required_exts=['.pdf'],
+                                        prompt_tmpl=prompt_tmpl,
+                                        chunk_size=chunk_size,
+                                        save_train_path=save_train_path,
+                                        save_val_path=save_val_path
+                                    )
         train_dataset, _ = self.load_QA_data(train_data_path=save_train_path,
                                             val_data_path=save_val_path
                                             )
@@ -169,10 +170,9 @@ class RAGgish:
     def load_finetuned_model(self, embed_name: str, model_output_path: str):
             """ Load the finetuned model """
             base_embed_model = resolve_embed_model(f"local:{embed_name}")
-            embed_model_finetuned = AdapterEmbeddingModel(
-                                    base_embed_model,
-                                    adapter_path=model_output_path,
-                                )
+            embed_model_finetuned = AdapterEmbeddingModel(base_embed_model,
+                                                            adapter_path=model_output_path,
+                                                            )
             return embed_model_finetuned
 
     def create_or_load_vector_idx(self, 
@@ -186,6 +186,7 @@ class RAGgish:
             storage_context = StorageContext.from_defaults(persist_dir=vec_store_path)
             index = load_index_from_storage(storage_context, index_id=vec_store_idx)
             return index
+        
         logger.debug("* Creating VectorStore Index")
         index = VectorStoreIndex(
                                 nodes=nodes, 
@@ -208,6 +209,7 @@ class RAGgish:
             storage_context = StorageContext.from_defaults(persist_dir=summary_path)
             index = load_index_from_storage(storage_context, index_id="summary_index")
             return index
+        
         logger.debug("* Creating Summary Index")
         index = SummaryIndex(nodes=nodes,
                             embed_model=self._set_embed_model() if embed_model is None else embed_model,
@@ -262,12 +264,11 @@ class RAGgish:
             return response
         
         metadata_vector_query_tool = FunctionTool.from_defaults(
-                                    name="metadata_vector_tool",
-                                    fn=metadata_vector_query,
-                                    description=(
-                                        "Useful if you want to get metadata "
-                                        "based on page numbers. "
-                                    ))
+                                                            name="metadata_vector_tool",
+                                                            fn=metadata_vector_query,
+                                                            description=(
+                                                            "Useful if you want to get metadata based on page numbers."
+                                                            ))
         logger.debug("- Created Metadata QueryEngine Tool")
         schema = metadata_vector_query_tool.metadata.get_parameters_dict()
         print("Metadata Tool Schema:")
@@ -285,12 +286,12 @@ class RAGgish:
             use_async=True,
         )
         summary_tool = QueryEngineTool.from_defaults(
-            name="summary_tool",
-            query_engine=summary_query_engine,
-            description=(
-                "Useful if you want to get a summary of the scientific paper. "
-            ),
-        )
+                                                    name="summary_tool",
+                                                    query_engine=summary_query_engine,
+                                                    description=(
+                                                    "Useful if you want to get a summary of the scientific paper."
+                                                    ),
+                                                )
         logger.debug("- Created Summary QueryEngine Tool")
         schema = summary_tool.metadata.get_parameters_dict()
         print("Summary Tool Schema:")

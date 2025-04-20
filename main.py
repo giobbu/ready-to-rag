@@ -19,7 +19,7 @@ if __name__== "__main__":
     logger.info('----------------- RAGgish ---------------------------')
     logger.info(' ')
     logger.info('------------ Loading RAG Configurations')
-    basic_rag = RAGgish(embed_name=params.embed_name, llm_name=params.llm_name)
+    basic_rag = RAGgish(embed_name=params.embed_name, llm_name=params.llm_name, temperature=params.temperature)
     if params.run_finetuning:
         logger.info(' ')
         logger.info('----------------- Finetuning ---------------------------')
