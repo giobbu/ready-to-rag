@@ -17,6 +17,7 @@ class EmbeddingSettings(BaseModel):
 
 class LLMSettings(BaseModel):
     llm_name: str = "gpt-3.5-turbo"
+    temperature: float = 0.0
 
 class PromptTemplate(BaseModel):
     prompt_tmpl: str = Field(default_factory=lambda: """
