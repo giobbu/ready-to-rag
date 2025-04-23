@@ -10,7 +10,7 @@ from llama_index.core.evaluation import EmbeddingQAFinetuneDataset, RetrieverEva
 from llama_index.embeddings.adapter import AdapterEmbeddingModel
 from llama_index.core.embeddings.utils import resolve_embed_model
 from evaluate.utils import get_cache_path, load_cached_results, save_results_to_cache
-from config.setting import EvalSettings
+from config.eval_setting import EvalSettings
 from config.logging_setting import setup_logger
 
 params = EvalSettings()
