@@ -13,3 +13,5 @@ class EvalEmbeddingSettings(BaseModel):
 
 class EvalChunkSettings(BaseModel):
     documents_path: str = "data/finetune-embed/train"
+    questions_path: str = "evaluate/cache_chunksize/questions"
+    nr_of_questions: int = 5
