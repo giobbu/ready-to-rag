@@ -1,6 +1,6 @@
 import pandas as pd
 
-def display_results_embedding(name:str, data:str, top: str, eval_results: list) -> pd.DataFrame:
+def create_df_results_embedding(name:str, data:str, top: str, eval_results: list) -> pd.DataFrame:
     """Display results from evaluate."""
     metric_dicts = [eval_result.metric_vals_dict for eval_result in eval_results]
     full_df = pd.DataFrame(metric_dicts)
