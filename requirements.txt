@@ -1,4 +1,4 @@
-llama-index==0.12.30
+llama-index==0.12.41
 llama-index-embeddings-huggingface==0.5.3
 llama-index-finetuning==0.2.0
 loguru==0.7.2
